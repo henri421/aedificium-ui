@@ -1,0 +1,49 @@
+/**
+ * CSV pour tableur francais.
+ *
+ * - Point-virgule en separateur : la virgule est le separateur decimal.
+ * - Marque d'ordre des octets : sans elle, un tableur lit le fichier dans
+ *   l'encodage de la machine et massacre accents et lettres grecques.
+ * - Fins de ligne CRLF, comprises partout.
+ */
+
+const SEPARATEUR = ';';
+const FIN_DE_LIGNE = '\r\n';
+const BOM = '﻿';
+
+function champ(valeur: string): string {
+  if (!/[;"\r\n]/.test(valeur)) return valeur;
+  return `"${valeur.replace(/"/g, '""')}"`;
+}
+
+/** Tableau de lignes en texte CSV, BOM compris. */
+export function csv(lignes: readonly (readonly string[])[]): string {
+  return BOM + lignes.map((l) => l.map(champ).join(SEPARATEUR)).join(FIN_DE_LIGNE) + FIN_DE_LIGNE;
+}
+
+export interface LigneResultat {
+  symbole: string;
+  libelle: string;
+  valeur: string;
+}
+
+export interface BlocResultat {
+  titre: string;
+  lignes: readonly LigneResultat[];
+  /** Precision ou motif d'indisponibilite ; null s'il n'y en a pas. */
+  note: string | null;
+}
+
+/**
+ * Les resultats affiches, en tableau. AUCUN BLOC N'EST OMIS : ce qui n'a pas
+ * ete calcule sort avec son motif, et le motif sort meme sans ligne — c'est
+ * justement le cas ou il porte toute l'information.
+ */
+export function resultatsEnCsv(blocs: readonly BlocResultat[]): string {
+  const lignes: string[][] = [['Bloc', 'Symbole', 'Grandeur', 'Valeur']];
+  for (const b of blocs) {
+    for (const l of b.lignes) lignes.push([b.titre, l.symbole, l.libelle, l.valeur]);
+    if (b.note !== null) lignes.push([b.titre, '', b.note, '']);
+  }
+  return csv(lignes);
+}
