@@ -150,13 +150,18 @@ function segmenter(source: string): Segment[] {
  * lettre. Un mot colle a une lettre ou a un chiffre reste intact, ainsi que
  * `alphabet` ou `Pierre` : `_` et `^` ne collent pas.
  */
-function convertirGrecques(texte: string): string {
-  return texte.replace(/[A-Za-z]+/g, (mot, position: number) => {
-    const avant = texte[position - 1];
-    const apres = texte[position + mot.length];
-    if (estAlphanumerique(avant) || estAlphanumerique(apres)) return mot;
-    return GRECQUES[mot] ?? mot;
-  });
+/**
+ * Noms de lettres laisses tels quels dans le TEXTE courant, parce que ce sont
+ * aussi des mots francais : « au nu du poteau ». En indice, ils se convertissent.
+ */
+const MOTS_FRANCAIS = new Set(['nu']);
+
+/**
+ * Un mot se lit en lettres Unicode : sans cela, « pièce » se couperait en
+ * « pi » + « èce » et deviendrait « πèce ».
+ */
+function convertirGrecques(texte: string, exclus: ReadonlySet<string> = new Set()): string {
+  return texte.replace(/[\p{L}\p{N}]+/gu, (mot) => (exclus.has(mot) ? mot : (GRECQUES[mot] ?? mot)));
 }
 
 /** `mm2` et semblables, en mot entier seulement (`mm25` et `M2` restent). */
@@ -168,7 +173,7 @@ function convertirUnites(texte: string): string {
 }
 
 function convertirTexte(texte: string): string {
-  return convertirGrecques(convertirUnites(texte.replace(/<=/g, '≤').replace(/>=/g, '≥')));
+  return convertirGrecques(convertirUnites(texte.replace(/<=/g, '≤').replace(/>=/g, '≥')), MOTS_FRANCAIS);
 }
 
 function chiffresIndice(chiffres: string): string {

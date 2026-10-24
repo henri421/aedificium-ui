@@ -49,8 +49,8 @@ describe('notationHtml — lettres grecques', () => {
   });
   it('alphabet complet', () => {
     expect(
-      notationHtml('alpha beta gamma delta epsilon zeta eta theta kappa lambda mu nu xi pi rho sigma tau upsilon phi chi psi omega')
-    ).toBe('α β γ δ ε ζ η θ κ λ μ ν ξ π ρ σ τ υ φ χ ψ ω');
+      notationHtml('alpha beta gamma delta epsilon zeta eta theta kappa lambda mu xi pi rho sigma tau upsilon phi chi psi omega')
+    ).toBe('α β γ δ ε ζ η θ κ λ μ ξ π ρ σ τ υ φ χ ψ ω');
   });
   it('eps abrege epsilon', () => {
     expect(notationHtml('eps_yd')).toBe('ε<sub>yd</sub>');
@@ -64,6 +64,16 @@ describe('notationHtml — lettres grecques', () => {
     expect(notationHtml('betail')).toBe('betail');
     expect(notationHtml('Pierre')).toBe('Pierre');
     expect(notationHtml('chiffre')).toBe('chiffre');
+  });
+  it('un mot francais accentue n est pas coupe en nom de lettre', () => {
+    expect(notationHtml('la pièce')).toBe('la pièce');
+    expect(notationTexte('pièce, étau, muée')).toBe('pièce, étau, muée');
+    expect(notationSvg('la pièce')).toBe('la pièce');
+  });
+  it('« nu » reste un mot dans le texte (au nu du poteau), mais se convertit en indice', () => {
+    expect(notationHtml('écrasement au nu du poteau')).toBe('écrasement au nu du poteau');
+    expect(notationTexte('V_Ed à d du nu')).toBe(notationTexte('V_Ed') + ' à d du nu');
+    expect(notationHtml('k_nu')).toBe('k<sub>ν</sub>');
   });
 });
 
