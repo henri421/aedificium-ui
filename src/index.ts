@@ -19,5 +19,5 @@ export {
   texteVisible,
   type OptionsControle,
 } from './controle';
-export { csv, resultatsEnCsv, type BlocResultat, type LigneResultat } from './csv';
+export { blocsEnTexte, csv, resultatsEnCsv, type BlocResultat, type LigneResultat } from './csv';
 export { ouvrirOuTelecharger, telecharger } from './navigateur';

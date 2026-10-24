@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { constatsAffichage, contenuBalise, notationHtml, texteVisible } from '../src/index';
+import { blocsEnTexte, constatsAffichage, contenuBalise, notationHtml, texteVisible } from '../src/index';
 
 describe('texteVisible', () => {
   it('retire balises, styles et commentaires, decode les entites', () => {
@@ -39,5 +39,14 @@ describe('contenuBalise', () => {
   it('premiere balise, texte visible', () => {
     expect(contenuBalise('<h1 class="t">Section <em>BA</em></h1><h1>b</h1>', 'h1')).toBe('Section BA');
     expect(contenuBalise('<p>x</p>', 'h1')).toBeNull();
+  });
+});
+
+describe('blocsEnTexte', () => {
+  it('notation de texte brut, sans muter les blocs recus', () => {
+    const bloc = { titre: 'alpha_1', lignes: [{ symbole: 'l_0', libelle: 'phi', valeur: '1 mm2' }], note: 'M_Ed' };
+    expect(blocsEnTexte([bloc])).toEqual([{ titre: 'α₁', lignes: [{ symbole: 'l₀', libelle: 'φ', valeur: '1 mm²' }], note: 'MEd' }]);
+    expect(bloc.titre).toBe('alpha_1');
+    expect(blocsEnTexte([{ titre: 't', lignes: [], note: null }])[0].note).toBeNull();
   });
 });

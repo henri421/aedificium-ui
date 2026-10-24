@@ -7,6 +7,8 @@
  * - Fins de ligne CRLF, comprises partout.
  */
 
+import { notationTexte } from './notation';
+
 const SEPARATEUR = ';';
 const FIN_DE_LIGNE = '\r\n';
 const BOM = '﻿';
@@ -46,4 +48,17 @@ export function resultatsEnCsv(blocs: readonly BlocResultat[]): string {
     if (b.note !== null) lignes.push([b.titre, '', b.note, '']);
   }
   return csv(lignes);
+}
+
+/**
+ * Les blocs en notation de texte brut (`M_Ed` -> `MEd`, `alpha_1` -> `α₁`),
+ * pour le CSV. Copie : les blocs recus, qui servent aussi a l'ecran et a la
+ * note, ne sont pas modifies.
+ */
+export function blocsEnTexte(blocs: readonly BlocResultat[]): BlocResultat[] {
+  return blocs.map((b) => ({
+    titre: notationTexte(b.titre),
+    lignes: b.lignes.map((l) => ({ symbole: notationTexte(l.symbole), libelle: notationTexte(l.libelle), valeur: notationTexte(l.valeur) })),
+    note: b.note === null ? null : notationTexte(b.note),
+  }));
 }
