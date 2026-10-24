@@ -8,13 +8,20 @@
  * puis a `constatsAffichage` : la liste rendue doit etre vide.
  */
 
-/** Texte visible d'un fragment HTML ou SVG : balises retirees, entites decodees. */
+/**
+ * Texte visible d'un fragment HTML ou SVG : balises retirees, entites decodees.
+ * Les balises de texte (`sub`, `sup`, `tspan`, `span`…) sont retirees sans
+ * espace, pour que `c<sub>d</sub>` se lise « cd » ; les autres (cellules,
+ * paragraphes, `<text>`) deviennent un separateur « | », pour que deux cases
+ * voisines ne se lisent pas comme un seul mot ou un seul nombre.
+ */
 export function texteVisible(html: string): string {
   return html
     .replace(/<style[\s\S]*?<\/style>/g, ' ')
     .replace(/<script[\s\S]*?<\/script>/g, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<[^>]*>/g, ' ')
+    .replace(/<\/?(sub|sup|tspan|span|em|strong|b|i|a|abbr|small)(\s[^>]*)?>/g, '')
+    .replace(/<[^>]*>/g, ' | ')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')

@@ -4,8 +4,13 @@ import { blocsEnTexte, constatsAffichage, contenuBalise, notationHtml, texteVisi
 
 describe('texteVisible', () => {
   it('retire balises, styles et commentaires, decode les entites', () => {
-    expect(texteVisible('<style>h1{}</style><p>a &lt; b &amp; c</p><!-- x_y -->').trim()).toBe('a < b & c');
+    expect(texteVisible('<style>h1{}</style><p>a &lt; b &amp; c</p><!-- x_y -->').trim()).toBe('| a < b & c |');
     expect(texteVisible('&phi;1').trim()).toBe('1');
+  });
+  it('indices recolles, cases separees', () => {
+    expect(texteVisible('c<sub>d</sub> = 30').trim()).toBe('cd = 30');
+    expect(texteVisible('l<tspan dy="0.4em" font-size="75%">bd</tspan><tspan dy="-0.3em"> = 561</tspan>').trim()).toBe('lbd = 561');
+    expect(texteVisible('<td>1,2</td><td>30</td>').trim()).toBe('| 1,2 | | 30 |');
   });
 });
 
