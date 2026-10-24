@@ -30,7 +30,7 @@ Dépendance Git épinglée sur une étiquette, en `devDependencies` : Vite
 l'embarque à la construction, aucun outil n'a de dépendance de production.
 
 ```json
-"devDependencies": { "aedificium-ui": "github:henri421/aedificium-ui#v1.0.0" }
+"devDependencies": { "aedificium-ui": "github:henri421/aedificium-ui#v1.1.0" }
 ```
 
 Le paquet expose ses sources TypeScript (`exports` → `src/index.ts`) : pas
