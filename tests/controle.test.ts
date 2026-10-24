@@ -38,6 +38,10 @@ describe('constatsAffichage', () => {
   it('les nombres entiers, les sections et les intervalles ne sont pas des zeros inutiles', () => {
     expect(constatsAffichage('§8.4.4(2), 1200 mm, C25/30, [1 ; 1,5], 60, 30 mm')).toEqual([]);
   });
+  it('les lettres accentuees bornent les mots ; le nu d un appui est un mot du metier', () => {
+    expect(constatsAffichage('périmètres de contrôle, au nu du poteau, déjà la base, état limite')).toEqual([]);
+    expect(constatsAffichage('très tres')).toHaveLength(1);
+  });
 });
 
 describe('contenuBalise', () => {

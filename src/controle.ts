@@ -32,8 +32,21 @@ export function texteVisible(html: string): string {
     .replace(/\s+/g, ' ');
 }
 
-export const NOMS_GRECS =
-  /\b(alpha|beta|gamma|delta|epsilon|eps|zeta|eta|theta|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)\b/;
+/**
+ * Bornes de mot qui comptent les lettres accentuees : `\b` ne connait que
+ * l'ASCII, et lirait « périmètres » comme « périmè|tres ».
+ */
+const AVANT = String.raw`(?<![\p{L}\p{N}_])`;
+const APRES = String.raw`(?![\p{L}\p{N}_])`;
+
+/**
+ * Noms de lettres grecques ecrits en toutes lettres. « nu » n'y est pas : le
+ * nu d'un appui est un mot du metier.
+ */
+export const NOMS_GRECS = new RegExp(
+  `${AVANT}(alpha|beta|gamma|delta|epsilon|eps|zeta|eta|theta|kappa|lambda|mu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)${APRES}`,
+  'u'
+);
 
 /**
  * Mots francais qui ne s'ecrivent JAMAIS sans accent. Les mots ambigus
@@ -78,7 +91,7 @@ export function constatsAffichage(texte: string, options: OptionsControle = {}):
   const c: string[] = [];
   const admis = new Set(options.motsAdmis ?? []);
   const mots = [...MOTS_SANS_ACCENT.filter((m) => !admis.has(m)), ...(options.motsEnPlus ?? [])];
-  const sansAccent = new RegExp(`\\b(${mots.join('|')})\\b`, 'i');
+  const sansAccent = new RegExp(`${AVANT}(${mots.join('|')})${APRES}`, 'iu');
 
   const souligne = texte.indexOf('_');
   if (souligne >= 0) c.push(`« _ » affiche : ${extrait(texte, souligne)}`);
@@ -92,9 +105,9 @@ export function constatsAffichage(texte: string, options: OptionsControle = {}):
   if (long) c.push(`plus de 3 decimales : ${extrait(texte, long.index)}`);
   const accent = sansAccent.exec(texte);
   if (accent) c.push(`accent manquant : ${extrait(texte, accent.index)}`);
-  const apostrophe = /(^|[^A-Za-z])[dlnDLN] (?=[aeiouyhéèêàâAEIOUYHÉ])/.exec(texte);
+  const apostrophe = new RegExp(String.raw`${AVANT}[dlnDLN] (?=[aeiouyhéèêàâAEIOUYHÉ])`, 'u').exec(texte);
   if (apostrophe) c.push(`apostrophe manquante : ${extrait(texte, apostrophe.index)}`);
-  const a = /\ba (la|le|les|l')\s/.exec(texte);
+  const a = new RegExp(String.raw`${AVANT}a (la|le|les|l')\s`, 'u').exec(texte);
   if (a) c.push(`« a » pour « à » : ${extrait(texte, a.index)}`);
   const type = AVERTISSEMENT_TYPE.exec(texte);
   if (type) c.push(`phrase type : ${extrait(texte, type.index)}`);
