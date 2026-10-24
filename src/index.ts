@@ -8,6 +8,7 @@
 
 export { JETONS, valeursDesJetons } from './jetons';
 export { echapper, lireNombre, nombreAffiche, nombreFr, tauxAffiche, tauxFr } from './format';
+export { notationHtml, notationSvg, notationTexte } from './notation';
 export { svgAutonome } from './svg';
 export { csv, resultatsEnCsv, type BlocResultat, type LigneResultat } from './csv';
 export { ouvrirOuTelecharger, telecharger } from './navigateur';
