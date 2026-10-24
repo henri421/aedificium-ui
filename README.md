@@ -10,6 +10,11 @@ Seulement ce qui doit se comporter **à l'identique** d'un outil à l'autre :
 | --- | --- |
 | `JETONS`, `valeursDesJetons` | bloc `:root` de l'identité graphique, embarqué dans les documents exportés |
 | `echapper` | échappement HTML/SVG |
+| `nombreAffiche` | nombre affiché : 3 décimales au plus, sans zéros inutiles (`1,2`, `0`) |
+| `tauxAffiche` | taux arrondi vers le verdict, sans zéros inutiles (`0,999`, `1`) |
+| `notationHtml` | notation en HTML sûr : `M_Ed` → `M<sub>Ed</sub>`, `sigma_s` → `σ<sub>s</sub>`, `mm2` → `mm²` |
+| `notationSvg` | notation dans un `<text>` SVG, décalages par `dy` : `l_0^2` |
+| `notationTexte` | notation en texte brut (CSV) : `M_Ed` → `MEd`, `gamma_M0` → `γM0` |
 | `nombreFr`, `lireNombre` | nombres à la française ; jamais de NaN ni de « -0 » à l'écran |
 | `tauxFr` | taux arrondi **vers le verdict** : jamais « 1,000 » à côté d'un verdict contraire |
 | `svgAutonome` | dessin exporté avec ses styles en ligne |
