@@ -7,7 +7,7 @@
  */
 
 export { JETONS, valeursDesJetons } from './jetons';
-export { echapper, lireNombre, nombreFr, tauxFr } from './format';
+export { echapper, lireNombre, nombreAffiche, nombreFr, tauxAffiche, tauxFr } from './format';
 export { svgAutonome } from './svg';
 export { csv, resultatsEnCsv, type BlocResultat, type LigneResultat } from './csv';
 export { ouvrirOuTelecharger, telecharger } from './navigateur';

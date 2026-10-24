@@ -52,3 +52,25 @@ export function tauxFr(taux: number, decimales = 3): string {
   const arrondi = taux < 1 ? Math.floor(taux * f) / f : Math.ceil(taux * f) / f;
   return nombreFr(arrondi, decimales);
 }
+
+/** Retire les zeros de fin de la partie decimale, puis la virgule restee seule. */
+function sansZeros(texte: string): string {
+  return texte.includes(',') ? texte.replace(/,?0+$/, '') : texte;
+}
+
+/**
+ * Nombre tel qu'il s'affiche : trois decimales au plus, sans zeros inutiles
+ * (« 1,2 » et non « 1,200 », « 0 » et non « 0,000 »). Meme arrondi, meme
+ * tiret pour un NaN ou un infini que `nombreFr`.
+ */
+export function nombreAffiche(valeur: number, decimalesMax = 3): string {
+  return sansZeros(nombreFr(valeur, decimalesMax));
+}
+
+/**
+ * Taux tel qu'il s'affiche : meme arrondi VERS LE VERDICT que `tauxFr`, puis
+ * sans zeros inutiles (« 1 » et non « 1,000 »).
+ */
+export function tauxAffiche(taux: number): string {
+  return sansZeros(tauxFr(taux, 3));
+}
