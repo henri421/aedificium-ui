@@ -286,6 +286,25 @@ describe('noteDeCalculHtml — conclusions', () => {
     expect(t2).toMatch(/[Vv]érification déterminante\s*:\s*Déversement, zone 3/);
   });
 
+  it('taux null (verification sans ratio) : « — », verdict selon ok, hors du choix de la determinante', () => {
+    const n = noteComplete();
+    n.verifications.push({ nom: 'Dispositions constructives', taux: null, ok: true, clause: '§9' });
+    n.verifications.push({ nom: 'Espacement des cadres', taux: null, ok: false });
+    const t2 = texteVisible(section(noteDeCalculHtml(n), 'Conclusions'));
+    expect(t2).toMatch(/Dispositions constructives[\s|]*§9[\s|]*—[\s|]*satisfaite/);
+    expect(t2).toMatch(/Espacement des cadres[\s|]*—[\s|]*non satisfaite/);
+    expect(t2).not.toContain('hors domaine');
+    expect(t2).toMatch(/[Vv]érification déterminante\s*:\s*Flèche, travée 2/);
+  });
+
+  it('taux tous null : pas de ligne de verification determinante, le tableau reste', () => {
+    const n = noteComplete();
+    n.verifications = [{ nom: 'Dispositions constructives', taux: null, ok: true }];
+    const t2 = texteVisible(section(noteDeCalculHtml(n), 'Conclusions'));
+    expect(t2).toContain('Dispositions constructives');
+    expect(t2).not.toMatch(/déterminante/i);
+  });
+
   it('pas de recapitulatif en tete : le tableau n apparait qu une fois, a la fin', () => {
     expect(html.match(/Effort tranchant, appui 2/g)).toHaveLength(1);
     expect(html.lastIndexOf('<h2')).toBeLessThan(html.indexOf('Effort tranchant, appui 2'));

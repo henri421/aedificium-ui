@@ -21,7 +21,8 @@ export type ElementNote =
   | { type: 'tableau'; titre?: string; entetes: string[]; lignes: string[][] }
   | { type: 'liste'; items: string[] }
   | { type: 'texte'; texte: string };
-export interface VerificationNote { nom: string; taux: number; ok: boolean; clause?: string }
+/** `taux: null` : verification sans ratio (dispositions constructives…), jugee sur `ok` seul. */
+export interface VerificationNote { nom: string; taux: number | null; ok: boolean; clause?: string }
 export interface CartoucheNote { projet: string; element: string; date: string; norme: string; outil: string }
 export interface NoteDeCalcul {
   cartouche: CartoucheNote;
@@ -88,10 +89,14 @@ const vide = (e: ElementNote) => e.type === 'liste' && e.items.length === 0;
 
 /** Tableau des verifications et verification determinante. */
 function conclusions(v: VerificationNote[]): string {
-  const cle = (x: VerificationNote) => (Number.isFinite(x.taux) ? x.taux : Infinity);
-  const det = v.reduce((a, b) => (cle(b) > cle(a) ? b : a));
-  const ok = (x: VerificationNote) => x.ok && Number.isFinite(x.taux);
-  return `<table><tr><th>Vérification</th><th>Clause</th><th>Taux</th><th>Verdict</th></tr>${v.map((x) => `<tr><td>${n(x.nom)}</td><td>${n(x.clause ?? '')}</td><td>${tauxAffiche(x.taux)}</td><td>${ok(x) ? 'satisfaite' : 'non satisfaite'}</td></tr>`).join('')}</table><p>Vérification déterminante : ${n(det.nom)} (taux ${tauxAffiche(det.taux)})</p>`;
+  // Un taux null ne concourt pas : sans ratio, rien a comparer.
+  const chiffrees = v.filter((x) => x.taux !== null);
+  const cle = (x: VerificationNote) => (Number.isFinite(x.taux) ? (x.taux as number) : Infinity);
+  const det = chiffrees.length > 0 ? chiffrees.reduce((a, b) => (cle(b) > cle(a) ? b : a)) : null;
+  const ok = (x: VerificationNote) => x.ok && (x.taux === null || Number.isFinite(x.taux));
+  const taux = (x: VerificationNote) => (x.taux === null ? '—' : tauxAffiche(x.taux));
+  const ligneDet = det === null ? '' : `<p>Vérification déterminante : ${n(det.nom)} (taux ${taux(det)})</p>`;
+  return `<table><tr><th>Vérification</th><th>Clause</th><th>Taux</th><th>Verdict</th></tr>${v.map((x) => `<tr><td>${n(x.nom)}</td><td>${n(x.clause ?? '')}</td><td>${taux(x)}</td><td>${ok(x) ? 'satisfaite' : 'non satisfaite'}</td></tr>`).join('')}</table>${ligneDet}`;
 }
 
 /** Compose la note de calcul HTML complete. */
