@@ -254,8 +254,9 @@ describe('noteDeCalculHtml — conclusions', () => {
     expect(t).toContain('§6.2.3');
   });
 
-  it('taux arrondis vers le verdict (tauxFr, 3 decimales)', () => {
-    expect(t).toContain('0,620');
+  it('taux arrondis vers le verdict, 3 decimales au plus sans zero inutile (tauxAffiche)', () => {
+    expect(t).toContain('0,62');
+    expect(t).not.toContain('0,620');
     expect(t).toContain('0,999');
     expect(t).toContain('1,001');
     expect(t).not.toContain('1,000');
