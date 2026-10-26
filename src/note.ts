@@ -75,7 +75,12 @@ const css = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace
 /** Rend un element de section. */
 function el(e: ElementNote): string {
   switch (e.type) {
-    case 'bloc': return `<section class="bloc"><h3>${n(e.bloc.titre)}</h3>${e.bloc.lignes.length ? `<table>${e.bloc.lignes.map((l) => `<tr><td>${n(l.symbole)}</td><td>${n(l.libelle)}</td><td>${n(l.valeur)}</td></tr>`).join('')}</table>` : ''}${e.bloc.note === null ? '' : `<p>${n(e.bloc.note)}</p>`}</section>`;
+    case 'bloc': {
+      // Sans aucun symbole, la colonne serait vide d un bout a l autre.
+      const avecSymbole = e.bloc.lignes.some((l) => l.symbole !== '');
+      const ligne = (l: BlocResultat['lignes'][number]) => `<tr>${avecSymbole ? `<td>${n(l.symbole)}</td>` : ''}<td>${n(l.libelle)}</td><td>${n(l.valeur)}</td></tr>`;
+      return `<section class="bloc"><h3>${n(e.bloc.titre)}</h3>${e.bloc.lignes.length ? `<table>${e.bloc.lignes.map(ligne).join('')}</table>` : ''}${e.bloc.note === null ? '' : `<p>${n(e.bloc.note)}</p>`}</section>`;
+    }
     case 'etape': return `<div class="etape">${e.clause ? `<span class="clause">${n(e.clause)}</span>` : ''}<div>${n(e.formule)}</div><div>= ${n(e.substituee)}</div><div>= ${n(e.resultat)}</div></div>`;
     case 'figure': return `<figure>${e.svg}${e.legende ? `<figcaption>${n(e.legende)}</figcaption>` : ''}</figure>`;
     case 'tableau': return `<table>${e.titre ? `<caption>${n(e.titre)}</caption>` : ''}<tr>${e.entetes.map((h) => `<th>${n(h)}</th>`).join('')}</tr>${e.lignes.map((l) => `<tr>${l.map((c) => `<td>${n(c)}</td>`).join('')}</tr>`).join('')}</table>`;

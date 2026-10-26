@@ -194,6 +194,16 @@ describe('noteDeCalculHtml — cartouche et document', () => {
 describe('noteDeCalculHtml — elements', () => {
   const html = noteDeCalculHtml(noteComplete());
 
+  it('bloc sans aucun symbole : pas de colonne symbole vide (2 cellules par ligne)', () => {
+    const n = noteComplete();
+    n.sections.geometrie = [{ type: 'bloc', bloc: { titre: 'Géométrie', lignes: [{ symbole: '', libelle: 'Forme', valeur: 'rectangle' }, { symbole: '', libelle: 'Aire', valeur: '120 000 mm²' }], note: null } }];
+    const g = section(noteDeCalculHtml(n), 'Géométrie');
+    for (const tr of g.match(/<tr[\s\S]*?<\/tr>/g) ?? []) expect(tr.match(/<td/g)).toHaveLength(2);
+    // Un bloc qui a des symboles garde ses trois colonnes.
+    const m = section(html, 'Matériaux');
+    expect((m.match(/<tr[\s\S]*?<\/tr>/g) ?? [''])[0].match(/<td/g)).toHaveLength(3);
+  });
+
   it('etape : formule, valeurs substituees, resultat, dans cet ordre, avec la clause', () => {
     const calculs = section(html, 'Calculs');
     const t = texteVisible(calculs);
