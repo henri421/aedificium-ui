@@ -21,3 +21,4 @@ export {
 } from './controle';
 export { blocsEnTexte, csv, resultatsEnCsv, type BlocResultat, type LigneResultat } from './csv';
 export { ouvrirOuTelecharger, telecharger } from './navigateur';
+export { SECTIONS_NOTE, STYLE_NOTE, noteDeCalculHtml, type CartoucheNote, type ElementNote, type NoteDeCalcul, type SectionNote, type VerificationNote } from './note';
