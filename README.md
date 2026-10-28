@@ -24,6 +24,14 @@ Seulement ce qui doit se comporter **à l'identique** d'un outil à l'autre :
 Les formulaires, la persistance et les vues restent propres à chaque outil.
 La décision est motivée dans `WebAedificium/DECISION-interface-commune.md`.
 
+## Éditeur de dessin
+
+Seule exception à cette règle : l'éditeur de nœuds et de barres, commun à MBT et à
+equilibre-statique (`src/editeur.ts` pour la logique pure, `src/editeur-dom.ts`
+pour le branchement des événements). Il ne dessine rien et ne garde pas le modèle :
+il traduit le pointeur et le clavier en actions ; l'app tient l'état et redessine.
+Voir [`PLAN.md`](PLAN.md).
+
 ## Utilisation
 
 Dépendance Git épinglée sur une étiquette, en `devDependencies` : Vite
