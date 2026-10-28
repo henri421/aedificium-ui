@@ -54,3 +54,4 @@ export {
   type Selection,
   type Vue,
 } from './editeur';
+export { brancherEditeur } from './editeur-dom';
