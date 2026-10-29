@@ -1,6 +1,14 @@
 /**
- * Mise en forme des nombres et du texte, a la francaise.
+ * Mise en forme des nombres et du texte, a la francaise ; en anglais
+ * (`definirLangue('en')`), point decimal.
  */
+
+import { langueCourante } from './langue';
+
+/** Separateur decimal de la langue courante. */
+function separateur(): string {
+  return langueCourante() === 'en' ? '.' : ',';
+}
 
 /** Echappement de tout texte insere dans du HTML ou du SVG. */
 export function echapper(valeur: string): string {
@@ -20,8 +28,8 @@ export function echapper(valeur: string): string {
  */
 export function nombreFr(valeur: number, decimales: number): string {
   if (!Number.isFinite(valeur)) return '—';
-  const texte = valeur.toFixed(decimales).replace('.', ',');
-  return /^-0(,0*)?$/.test(texte) ? texte.slice(1) : texte;
+  const texte = valeur.toFixed(decimales).replace('.', separateur());
+  return /^-0([.,]0*)?$/.test(texte) ? texte.slice(1) : texte;
 }
 
 /**
@@ -46,7 +54,7 @@ export function lireNombre(texte: string): number | null {
  * deux cas le nombre contredit la conclusion. L'egalite exacte reste « 1,000 ».
  */
 export function tauxFr(taux: number, decimales = 3): string {
-  if (!Number.isFinite(taux)) return 'hors domaine';
+  if (!Number.isFinite(taux)) return langueCourante() === 'en' ? 'out of range' : 'hors domaine';
   if (taux === 1) return nombreFr(1, decimales);
   const f = 10 ** decimales;
   const arrondi = taux < 1 ? Math.floor(taux * f) / f : Math.ceil(taux * f) / f;
@@ -55,7 +63,7 @@ export function tauxFr(taux: number, decimales = 3): string {
 
 /** Retire les zeros de fin de la partie decimale, puis la virgule restee seule. */
 function sansZeros(texte: string): string {
-  return texte.includes(',') ? texte.replace(/,?0+$/, '') : texte;
+  return texte.includes(separateur()) ? texte.replace(/[.,]?0+$/, '') : texte;
 }
 
 /**

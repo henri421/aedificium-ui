@@ -13,6 +13,7 @@ export { notationHtml, notationSvg, notationTexte } from './notation';
 export { svgAutonome } from './svg';
 export {
   AVERTISSEMENT_TYPE,
+  MOTS_FRANCAIS,
   MOTS_SANS_ACCENT,
   NOMS_GRECS,
   constatsAffichage,
@@ -22,6 +23,16 @@ export {
 } from './controle';
 export { blocsEnTexte, csv, resultatsEnCsv, type BlocResultat, type LigneResultat } from './csv';
 export { ouvrirOuTelecharger, telecharger } from './navigateur';
+export {
+  definirLangue,
+  langueCourante,
+  langueDuDocument,
+  lienDeLangue,
+  pointDecimal,
+  traducteur,
+  type Langue,
+  type RegleDePhrase,
+} from './langue';
 export { SECTIONS_NOTE, STYLE_NOTE, noteDeCalculHtml, type CartoucheNote, type ElementNote, type NoteDeCalcul, type SectionNote, type VerificationNote } from './note';
 export {
   ETAT_EDITEUR_INITIAL,

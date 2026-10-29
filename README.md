@@ -24,6 +24,16 @@ Seulement ce qui doit se comporter **à l'identique** d'un outil à l'autre :
 Les formulaires, la persistance et les vues restent propres à chaque outil.
 La décision est motivée dans `WebAedificium/DECISION-interface-commune.md`.
 
+## Langue
+
+Depuis la v1.5.0, chaque app existe en français (`index.html`) et en anglais
+(`en/index.html`), avec une seule compilation. Au démarrage, l'app appelle
+`definirLangue(langueDuDocument(document))` avant tout rendu ; les nombres
+(point décimal en anglais), le CSV (virgule en séparateur en anglais) et la
+note suivent alors la langue. `lienDeLangue` donne le bouton FR / EN de la barre ;
+`traducteur` traduit les phrases du noyau de calcul, et
+`constatsAffichage(texte, { langue: 'en' })` y chasse les restes de français.
+
 ## Éditeur de dessin
 
 Seule exception à cette règle : l'éditeur de nœuds et de barres, commun à MBT et à

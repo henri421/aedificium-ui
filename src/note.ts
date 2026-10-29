@@ -1,6 +1,7 @@
 import { type BlocResultat } from './csv';
 import { echapper, tauxAffiche } from './format';
 import { JETONS } from './jetons';
+import { langueCourante } from './langue';
 import { notationHtml } from './notation';
 
 /** Ordre fixe des sections de la note. */
@@ -14,6 +15,24 @@ export const SECTIONS_NOTE: readonly { cle: SectionNote; titre: string }[] = [
   { cle: 'calculs', titre: 'Calculs et vérifications' },
   { cle: 'conclusions', titre: 'Conclusions' },
 ];
+
+/** Titres des sections en anglais, dans le meme ordre. */
+const TITRES_EN: Record<SectionNote, string> = {
+  geometrie: 'Geometry',
+  materiaux: 'Materials',
+  hypotheses: 'Assumptions',
+  charges: 'Load cases',
+  combinaisons: 'Load combinations',
+  calculs: 'Calculations and checks',
+  conclusions: 'Conclusions',
+};
+
+/** Textes fixes de la note, selon la langue courante. */
+function mots() {
+  return langueCourante() === 'en'
+    ? { note: 'Calculation note', projet: 'Project', element: 'Element', norme: 'Standard', date: 'Date', outil: 'tool', verification: 'Check', clause: 'Clause', taux: 'Ratio', verdict: 'Verdict', satisfaite: 'satisfied', nonSatisfaite: 'not satisfied', determinante: 'Governing check', page: 'page', deuxPoints: ':' }
+    : { note: 'Note de calcul', projet: 'Projet', element: 'Élément', norme: 'Norme', date: 'Date', outil: 'outil', verification: 'Vérification', clause: 'Clause', taux: 'Taux', verdict: 'Verdict', satisfaite: 'satisfaite', nonSatisfaite: 'non satisfaite', determinante: 'Vérification déterminante', page: 'page', deuxPoints: ' :' };
+}
 export type ElementNote =
   | { type: 'bloc'; bloc: BlocResultat }
   | { type: 'etape'; formule: string; substituee: string; resultat: string; clause?: string }
@@ -100,27 +119,30 @@ function conclusions(v: VerificationNote[]): string {
   const det = chiffrees.length > 0 ? chiffrees.reduce((a, b) => (cle(b) > cle(a) ? b : a)) : null;
   const ok = (x: VerificationNote) => x.ok && (x.taux === null || Number.isFinite(x.taux));
   const taux = (x: VerificationNote) => (x.taux === null ? '—' : tauxAffiche(x.taux));
-  const ligneDet = det === null ? '' : `<p>Vérification déterminante : ${n(det.nom)} (taux ${taux(det)})</p>`;
-  return `<table><tr><th>Vérification</th><th>Clause</th><th>Taux</th><th>Verdict</th></tr>${v.map((x) => `<tr><td>${n(x.nom)}</td><td>${n(x.clause ?? '')}</td><td>${taux(x)}</td><td>${ok(x) ? 'satisfaite' : 'non satisfaite'}</td></tr>`).join('')}</table>${ligneDet}`;
+  const m = mots();
+  const ligneDet = det === null ? '' : `<p>${m.determinante}${m.deuxPoints} ${n(det.nom)} (${m.taux.toLowerCase()} ${taux(det)})</p>`;
+  return `<table><tr><th>${m.verification}</th><th>${m.clause}</th><th>${m.taux}</th><th>${m.verdict}</th></tr>${v.map((x) => `<tr><td>${n(x.nom)}</td><td>${n(x.clause ?? '')}</td><td>${taux(x)}</td><td>${ok(x) ? m.satisfaite : m.nonSatisfaite}</td></tr>`).join('')}</table>${ligneDet}`;
 }
 
 /** Compose la note de calcul HTML complete. */
 export function noteDeCalculHtml(note: NoteDeCalcul, styles = ''): string {
   const c = note.cartouche;
+  const m = mots();
+  const en = langueCourante() === 'en';
   let i = 0;
   // Sections dans l'ordre fixe ; une section sans contenu disparait.
   const corps = SECTIONS_NOTE.map((s) => {
     const contenu = s.cle === 'conclusions' ? (note.verifications.length ? conclusions(note.verifications) : '') : (note.sections[s.cle] ?? []).filter((e) => !vide(e)).map(el).join('');
-    return contenu === '' ? '' : `<section class="partie"><h2>${++i}. ${s.titre}</h2>${contenu}</section>`;
+    return contenu === '' ? '' : `<section class="partie"><h2>${++i}. ${en ? TITRES_EN[s.cle] : s.titre}</h2>${contenu}</section>`;
   }).join('');
   // Boites de marge de la page imprimee.
-  const marge = `@page { @bottom-left { content: "${css(c.projet)} — ${css(c.element)}"; } @bottom-right { content: "page " counter(page) " / " counter(pages); } }`;
+  const marge = `@page { @bottom-left { content: "${css(c.projet)} — ${css(c.element)}"; } @bottom-right { content: "${m.page} " counter(page) " / " counter(pages); } }`;
   return `<!doctype html>
-<html lang="fr"><head><meta charset="utf-8" /><title>Note de calcul — ${echapper(c.element)}</title>
+<html lang="${en ? 'en' : 'fr'}"><head><meta charset="utf-8" /><title>${m.note} — ${echapper(c.element)}</title>
 <style>${styles}
 ${STYLE_NOTE}
 ${marge}</style></head><body>
-<header><h1>Note de calcul</h1><p>Projet : ${n(c.projet)}</p><p>Élément : ${n(c.element)}</p><p>Norme : ${n(c.norme)}</p><p>Date : ${n(c.date)} · outil ${n(c.outil)}</p></header>
+<header><h1>${m.note}</h1><p>${m.projet}${m.deuxPoints} ${n(c.projet)}</p><p>${m.element}${m.deuxPoints} ${n(c.element)}</p><p>${m.norme}${m.deuxPoints} ${n(c.norme)}</p><p>${m.date}${m.deuxPoints} ${n(c.date)} · ${m.outil} ${n(c.outil)}</p></header>
 ${(note.avertissements ?? []).map((a) => `<p class="avertissement">${n(a)}</p>`).join('')}
 ${corps}
 </body></html>`;

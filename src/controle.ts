@@ -81,6 +81,42 @@ export interface OptionsControle {
    * mot repris tel quel d'une source). A justifier dans le test.
    */
   motsAdmis?: readonly string[];
+  /**
+   * Langue du texte controle. En anglais, les regles propres au francais
+   * (accents, apostrophes, virgule decimale) laissent place a la chasse aux
+   * restes de francais : lettres accentuees et mots courants.
+   */
+  langue?: 'fr' | 'en';
+}
+
+/** Lettres accentuees du francais : aucune n'a sa place dans un texte anglais. */
+const LETTRES_FRANCAISES = /[àâçéèêëîïôûùüÿœÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ]/u;
+
+/** Mots outils du francais, jamais employes seuls en anglais. */
+export const MOTS_FRANCAIS: readonly string[] = [
+  'le', 'la', 'les', 'des', 'du', 'de', 'et', 'est', 'une', 'pour', 'avec', 'dans', 'sans', 'par', 'sur',
+  'au', 'aux', 'ou', 'que', 'qui', 'pas', 'sont', 'entre', 'selon', 'vers', 'chaque', 'non satisfaite',
+];
+
+/** Constats d'un texte anglais : restes de francais, notations brutes. */
+function constatsAnglais(texte: string, options: OptionsControle): string[] {
+  const c: string[] = [];
+  const admis = new Set(options.motsAdmis ?? []);
+  const mots = [...MOTS_FRANCAIS.filter((m) => !admis.has(m)), ...(options.motsEnPlus ?? [])];
+  const francais = new RegExp(`${AVANT}(${mots.join('|')})${APRES}`, 'u');
+  const souligne = texte.indexOf('_');
+  if (souligne >= 0) c.push(`« _ » affiche : ${extrait(texte, souligne)}`);
+  const chapeau = texte.indexOf('^');
+  if (chapeau >= 0) c.push(`« ^ » affiche : ${extrait(texte, chapeau)}`);
+  const grec = NOMS_GRECS.exec(texte);
+  if (grec) c.push(`nom de lettre grecque : ${extrait(texte, grec.index)}`);
+  const virgule = /\d,\d/.exec(texte);
+  if (virgule) c.push(`virgule decimale : ${extrait(texte, virgule.index)}`);
+  const lettre = LETTRES_FRANCAISES.exec(texte);
+  if (lettre && !admis.has(lettre[0])) c.push(`lettre accentuee : ${extrait(texte, lettre.index)}`);
+  const mot = francais.exec(texte);
+  if (mot) c.push(`mot francais : ${extrait(texte, mot.index)}`);
+  return c;
 }
 
 /**
@@ -88,6 +124,7 @@ export interface OptionsControle {
  * redire. Chaque constat cite le passage, pour corriger sans chercher.
  */
 export function constatsAffichage(texte: string, options: OptionsControle = {}): string[] {
+  if (options.langue === 'en') return constatsAnglais(texte, options);
   const c: string[] = [];
   const admis = new Set(options.motsAdmis ?? []);
   const mots = [...MOTS_SANS_ACCENT.filter((m) => !admis.has(m)), ...(options.motsEnPlus ?? [])];
