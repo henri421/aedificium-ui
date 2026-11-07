@@ -34,6 +34,27 @@ note suivent alors la langue. `lienDeLangue` donne le bouton FR / EN de la barre
 `traducteur` traduit les phrases du noyau de calcul, et
 `constatsAffichage(texte, { langue: 'en' })` y chasse les restes de français.
 
+## Projets et feuilles de calcul (v1.6.0)
+
+Deuxième exception à la règle : la persistance des **projets de la suite**
+(étape 9.5 du plan). Toutes les apps sont publiées sur la même origine
+(`henri421.github.io`) et partagent une base IndexedDB `aedificium`.
+
+- `src/projets.ts` : moteur pur, sans import. Arborescence projet → dossiers →
+  éléments → calculs (une app) → feuilles. Une feuille est complète, ou
+  **héritée** d'une autre : elle ne stocke que ce qui diffère (`surcharges`,
+  chemin JSON → valeur) et suit sa feuille d'origine pour le reste. Fichier
+  `aedificium-projet/1`.
+- `src/projets-stockage.ts` : dépôt IndexedDB partagé, dépôt en mémoire.
+- `src/feuilles-dom.ts` : `brancherFeuilles({ app, nomApp, conteneur, lire,
+  charger, libelle?, marquer? })`, la barre des feuilles d'une app (onglets,
+  dupliquer, copie indépendante, statut à justifier / étude, détacher,
+  champs propres avec retour à l'origine, « Ranger dans un projet… »).
+  L'app appelle `barre.signaler()` après chaque saisie.
+
+Le hub (sans compilation) charge une copie de `projets.ts` et
+`projets-stockage.ts` sans types, générée par `_banc-local/copier-projets.mjs`.
+
 ## Éditeur de dessin
 
 Seule exception à cette règle : l'éditeur de nœuds et de barres, commun à MBT et à

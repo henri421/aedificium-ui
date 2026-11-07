@@ -1,0 +1,501 @@
+/**
+ * Barre des feuilles de calcul, commune a toutes les apps (etape 9.5).
+ *
+ * L'app fournit trois fonctions : lire son etat en JSON, le recharger, et
+ * (facultatif) le libelle d'un champ. La barre fait le reste :
+ *
+ * - ouverte depuis le hub (`?projet=…&calcul=…&feuille=…`), elle affiche le
+ *   chemin du calcul et ses feuilles (F1, F2…), et enregistre chaque saisie
+ *   dans la feuille courante ; une feuille heritee n'en garde que ce qui
+ *   differe de son origine ;
+ * - ouverte hors projet, elle propose « Ranger dans un projet… ».
+ *
+ * Le projet est relu avant chaque ecriture : le hub ou un autre onglet a pu le
+ * modifier entre-temps.
+ */
+
+import { langueCourante } from './langue';
+import {
+  ErreurProjet,
+  ajouterCalcul,
+  ajouterElement,
+  champsSurcharges,
+  cheminDuNoeud,
+  clesDuChemin,
+  creerProjet,
+  definirStatut,
+  detacherFeuille,
+  donneesDeFeuille,
+  dupliquerFeuille,
+  ecrireFeuille,
+  elements,
+  renommer,
+  revenirAOrigine,
+  supprimerFeuille,
+  toucher,
+  trouverCalcul,
+  trouverFeuille,
+  type Calcul,
+  type Json,
+  type Projet,
+} from './projets';
+import { depotParDefaut, type DepotProjets } from './projets-stockage';
+
+export interface OptionsFeuilles {
+  /** Identifiant de l'app : nom de son depot (`mur-en-l`). */
+  app: string;
+  /** Nom affiche de l'app. */
+  nomApp: string;
+  /** Element ou dessiner la barre (vide ; la barre le remplit). */
+  conteneur: HTMLElement;
+  /** Etat complet de l'app, au format de son JSON. */
+  lire(): Json;
+  /** Recharge l'app ; `null` : valeurs par defaut (calcul cree depuis le hub). */
+  charger(donnees: Json | null): void;
+  /** Libelle d'un champ, pour la liste des champs propres a une feuille. */
+  libelle?(chemin: string): string;
+  /** Champs propres a la feuille courante (l'app peut les marquer a l'ecran). */
+  marquer?(chemins: string[]): void;
+  /** Adresse du hub (page des projets). */
+  adresseHub?: string;
+  depot?: DepotProjets;
+  /** Delai d'enregistrement apres la derniere saisie (ms). */
+  delai?: number;
+}
+
+export interface BarreFeuilles {
+  /** A appeler apres chaque saisie : la feuille courante sera enregistree. */
+  signaler(): void;
+  /** Vrai si l'app travaille dans une feuille de projet. */
+  dansUnProjet(): boolean;
+  /** Enregistre tout de suite la saisie en attente. */
+  enregistrer(): Promise<void>;
+}
+
+const T = (fr: string, en: string): string => (langueCourante() === 'en' ? en : fr);
+
+const ech = (s: string): string =>
+  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+
+const STYLE = `
+.af-barre{font-family:var(--sans,system-ui,sans-serif);font-size:13px;border:1px solid var(--bordure,#c8c6c0);
+  border-radius:var(--rayon,4px);background:var(--surface,#fff);padding:8px 10px;margin:0 0 12px}
+.af-chemin{color:var(--texte-faible,#6a6862);font-size:12px;margin-bottom:6px}
+.af-chemin a{color:var(--accent,#1e5aa8)}
+.af-onglets{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.af-onglet{font:inherit;padding:4px 10px;border:1px solid var(--bordure,#c8c6c0);border-radius:var(--rayon-petit,3px);
+  background:var(--surface-appui,#f2f1ec);color:var(--texte,#1a1a1a);cursor:pointer;display:inline-flex;gap:6px;align-items:baseline}
+.af-onglet[aria-selected="true"]{background:var(--accent-doux,#eaf1f9);border-color:var(--accent,#1e5aa8);font-weight:600}
+.af-onglet .af-origine{color:var(--texte-faible,#6a6862);font-weight:400;font-size:11px}
+.af-onglet.af-etude{font-style:italic}
+.af-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.af-actions button,.af-dialogue button{font:inherit;font-size:12px;padding:3px 9px;border:1px solid var(--bordure,#c8c6c0);
+  border-radius:var(--rayon-petit,3px);background:var(--surface,#fff);color:var(--texte,#1a1a1a);cursor:pointer}
+.af-actions button:hover,.af-onglet:hover{background:var(--accent-doux,#eaf1f9)}
+.af-actions .af-danger{color:var(--refus,#a52121)}
+.af-statut{font-size:11px;padding:0 6px;border-radius:var(--rayon-petit,3px);background:var(--ok-fond,#eaf4ee);color:var(--ok,#1f6f3f)}
+.af-statut.af-etude{background:var(--surface-appui,#f2f1ec);color:var(--texte-doux,#4a4842)}
+.af-propres{margin-top:6px;color:var(--texte-doux,#4a4842)}
+.af-propres button{font:inherit;font-size:12px;border:0;background:none;color:var(--accent,#1e5aa8);cursor:pointer;padding:0 2px}
+.af-hors{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--texte-doux,#4a4842)}
+.af-dialogue{border:1px solid var(--bordure,#c8c6c0);border-radius:var(--rayon,4px);padding:14px 16px;
+  max-width:min(420px,calc(100vw - 32px));font-family:var(--sans,system-ui,sans-serif);font-size:13px}
+.af-dialogue::backdrop{background:rgba(26,26,26,.25)}
+.af-dialogue label{display:flex;flex-direction:column;gap:4px;margin:0 0 10px}
+.af-dialogue [hidden]{display:none}
+.af-dialogue input,.af-dialogue select{font:inherit;padding:5px 7px;border:1px solid var(--bordure,#c8c6c0);border-radius:var(--rayon-petit,3px)}
+.af-dialogue .af-boutons{display:flex;justify-content:flex-end;gap:6px}
+.af-dialogue .af-principal{background:var(--accent,#1e5aa8);border-color:var(--accent,#1e5aa8);color:#fff}
+.af-propre{box-shadow:inset 3px 0 0 var(--accent,#1e5aa8);background:var(--accent-doux,#eaf1f9)}
+`;
+
+function injecterStyle(doc: Document): void {
+  if (doc.getElementById('af-style')) return;
+  const s = doc.createElement('style');
+  s.id = 'af-style';
+  s.textContent = STYLE;
+  doc.head.appendChild(s);
+}
+
+/** Boite modale ; « Annuler » n'est pas un bouton d'envoi (Entree valide toujours). */
+function boite(doc: Document, html: string): HTMLDialogElement {
+  const d = doc.createElement('dialog');
+  d.className = 'af-dialogue';
+  d.innerHTML = html;
+  doc.body.appendChild(d);
+  d.addEventListener('close', () => d.remove());
+  for (const b of d.querySelectorAll('[data-fermer]')) b.addEventListener('click', () => d.close('non'));
+  d.showModal();
+  return d;
+}
+
+const ANNULER = (): string => `<button type="button" data-fermer>${T('Annuler', 'Cancel')}</button>`;
+
+function demander(doc: Document, titre: string, valeur: string): Promise<string | null> {
+  return new Promise((ok) => {
+    const d = boite(
+      doc,
+      `<form method="dialog"><label>${ech(titre)}<input name="v" value="${ech(valeur)}" required></label>
+       <div class="af-boutons">${ANNULER()}<button value="oui" class="af-principal">${T('Valider', 'OK')}</button></div></form>`
+    );
+    const champ = d.querySelector('input') as HTMLInputElement;
+    champ.select();
+    d.addEventListener('close', () => ok(d.returnValue === 'oui' && champ.value.trim() ? champ.value.trim() : null));
+  });
+}
+
+function signaler(doc: Document, message: string): void {
+  boite(doc, `<form method="dialog"><p>${ech(message)}</p><div class="af-boutons"><button class="af-principal">OK</button></div></form>`);
+}
+
+function messageDErreur(e: unknown): string {
+  if (!(e instanceof ErreurProjet)) return String((e as Error)?.message ?? e);
+  if (langueCourante() !== 'en') return e.message;
+  const en: Record<string, string> = {
+    format: 'Unknown or inconsistent project file.',
+    introuvable: 'Item not found (deleted in another tab?).',
+    cycle: 'Circular inheritance between sheets.',
+    heritiers: 'Other sheets inherit from this one: detach them first.',
+    'derniere-feuille': 'A calculation keeps at least one sheet.',
+    deplacement: 'A folder cannot go into itself or one of its subfolders.',
+  };
+  return en[e.code] ?? e.message;
+}
+
+/** Libelle par defaut : le chemin, cles separees par « › ». */
+const libelleBrut = (c: string): string => clesDuChemin(c).join(' › ');
+
+export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
+  const doc = o.conteneur.ownerDocument;
+  const fen = doc.defaultView as Window;
+  const depot = o.depot ?? depotParDefaut();
+  const delai = o.delai ?? 400;
+  const hub =
+    o.adresseHub ??
+    new URL(`../WebAedificium/${langueCourante() === 'en' ? 'en/' : ''}`, fen.location.href.split(/[?#]/)[0].replace(/\/en\/[^/]*$/, '/')).href;
+  injecterStyle(doc);
+
+  const params = new URLSearchParams(fen.location.search);
+  let projetId = params.get('projet');
+  let calculId = params.get('calcul');
+  let feuilleId = params.get('feuille');
+  let projet: Projet | null = null;
+  let minuterie: ReturnType<typeof setTimeout> | null = null;
+  // Tant que la feuille n'est pas chargee, la saisie affichee n'est pas la
+  // sienne : rien ne doit l'enregistrer dedans.
+  let pret = false;
+
+  const calcul = (): Calcul | null => (projet && calculId ? (trouverCalcul(projet, calculId)?.calcul ?? null) : null);
+
+  function majAdresse(): void {
+    const u = new URL(fen.location.href);
+    if (projetId && calculId && feuilleId) {
+      u.searchParams.set('projet', projetId);
+      u.searchParams.set('calcul', calculId);
+      u.searchParams.set('feuille', feuilleId);
+    } else {
+      for (const k of ['projet', 'calcul', 'feuille']) u.searchParams.delete(k);
+    }
+    fen.history.replaceState(null, '', u.href);
+  }
+
+  /** Relit le projet, applique `fn`, enregistre, redessine. */
+  async function modifier(fn: (p: Projet, c: Calcul) => void): Promise<boolean> {
+    try {
+      if (!projetId || !calculId) return false;
+      const frais = await depot.lire(projetId);
+      if (!frais) throw new ErreurProjet('introuvable', T('Projet introuvable dans ce navigateur.', 'Project not found in this browser.'));
+      projet = frais;
+      const c = calcul();
+      if (!c) throw new ErreurProjet('introuvable', T('Calcul introuvable dans le projet.', 'Calculation not found in the project.'));
+      fn(projet, c);
+      toucher(projet);
+      await depot.ecrire(projet);
+      dessiner();
+      return true;
+    } catch (e) {
+      signaler(doc, messageDErreur(e));
+      return false;
+    }
+  }
+
+  async function enregistrer(): Promise<void> {
+    if (minuterie !== null) {
+      clearTimeout(minuterie);
+      minuterie = null;
+    }
+    if (!feuilleId || !pret) return;
+    const fid = feuilleId;
+    const donnees = o.lire();
+    await modifier((_p, c) => ecrireFeuille(c, fid, donnees));
+  }
+
+  function chargerFeuille(): void {
+    const c = calcul();
+    if (!c || !feuilleId) return;
+    o.charger(donneesDeFeuille(c, feuilleId));
+  }
+
+  async function changerDeFeuille(id: string): Promise<void> {
+    await enregistrer();
+    feuilleId = id;
+    await modifier((_p, c) => (c.active = id));
+    majAdresse();
+    chargerFeuille();
+    dessiner();
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Dessin                                                         */
+  /* -------------------------------------------------------------- */
+
+  function dessinerHorsProjet(): void {
+    o.conteneur.innerHTML = `<div class="af-barre af-hors">
+        <span>${T('Calcul hors projet.', 'Calculation outside any project.')}</span>
+        <span class="af-actions" style="margin:0"><button data-af="ranger">${T('Ranger dans un projet…', 'File in a project…')}</button></span>
+        <a href="${ech(hub)}#projets" target="_blank" rel="noopener">${T('Mes projets', 'My projects')} ↗</a></div>`;
+    o.marquer?.([]);
+  }
+
+  function dessiner(): void {
+    const c = calcul();
+    if (!projet || !c || !feuilleId) {
+      dessinerHorsProjet();
+      return;
+    }
+    if (!c.feuilles.some((f) => f.id === feuilleId)) feuilleId = c.active;
+    const f = trouverFeuille(c, feuilleId as string);
+    const chemin = [projet.nom, ...cheminDuNoeud(projet, c.id).slice(0, -1), c.nom || o.nomApp].map(ech).join(' › ');
+    const onglets = c.feuilles
+      .map((x) => {
+        const origine = x.origine ? c.feuilles.find((y) => y.id === x.origine)?.nom : null;
+        return `<button class="af-onglet${x.statut === 'etude' ? ' af-etude' : ''}" role="tab" aria-selected="${x.id === f.id}" data-af-feuille="${ech(x.id)}"
+          title="${x.statut === 'justifier' ? T('À justifier : part dans la note', 'To justify: goes into the report') : T('Étude : hors note', 'Study: not in the report')}">
+          ${ech(x.nom)}${origine ? `<span class="af-origine">← ${ech(origine)}</span>` : ''}</button>`;
+      })
+      .join('');
+    const propres = champsSurcharges(c, f.id);
+    const nom = (k: string): string => (o.libelle ? o.libelle(k) : '') || libelleBrut(k);
+    const ligneOrigine = f.origine
+      ? `<div class="af-propres">${T("D'après", 'Based on')} « ${ech(c.feuilles.find((y) => y.id === f.origine)?.nom ?? '?')} » ·
+          ${
+            propres.length === 0
+              ? T('aucun champ propre : tout suit la feuille d’origine.', 'no own field: everything follows the original sheet.')
+              : `${T('propre à cette feuille', 'own to this sheet')} : ${propres
+                  .map((k) => `${ech(nom(k))} <button data-af-revenir="${ech(k)}" title="${T('Revenir à la valeur de la feuille d’origine', 'Back to the value of the original sheet')}">↺</button>`)
+                  .join(' · ')}`
+          }</div>`
+      : '';
+    o.conteneur.innerHTML = `<div class="af-barre">
+        <div class="af-chemin"><a href="${ech(hub)}#projets/${ech(projet.id)}" target="_blank" rel="noopener">${chemin}</a></div>
+        <div class="af-onglets" role="tablist">${onglets}
+          <span class="af-statut${f.statut === 'etude' ? ' af-etude' : ''}">${f.statut === 'justifier' ? T('à justifier', 'to justify') : T('étude', 'study')}</span></div>
+        <div class="af-actions">
+          <button data-af="dupliquer" title="${T('Nouvelle feuille qui suit celle-ci, sauf les champs que vous changerez', 'New sheet that follows this one, except the fields you change')}">${T('Dupliquer', 'Duplicate')}</button>
+          <button data-af="copier">${T('Copie indépendante', 'Independent copy')}</button>
+          <button data-af="renommer">${T('Renommer', 'Rename')}</button>
+          <button data-af="statut">${f.statut === 'justifier' ? T('Passer en étude', 'Mark as study') : T('Passer à justifier', 'Mark to justify')}</button>
+          ${f.origine ? `<button data-af="detacher" title="${T('La feuille ne suit plus son origine', 'The sheet stops following its origin')}">${T('Détacher', 'Detach')}</button>` : ''}
+          <button data-af="supprimer" class="af-danger">${T('Supprimer la feuille', 'Delete sheet')}</button>
+          <button data-af="sortir">${T('Quitter le projet', 'Leave the project')}</button>
+        </div>${ligneOrigine}</div>`;
+    o.marquer?.(propres);
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Actions                                                        */
+  /* -------------------------------------------------------------- */
+
+  async function ranger(): Promise<void> {
+    const liste = await depot.lister();
+    const choixProjets = liste.map((r) => `<option value="${ech(r.id)}">${ech(r.nom)}</option>`).join('');
+    const d = boite(
+      doc,
+      `<form method="dialog">
+        <label>${T('Projet', 'Project')}<select name="projet">${choixProjets}<option value="">${T('Nouveau projet…', 'New project…')}</option></select></label>
+        <label data-nouveau>${T('Nom du nouveau projet', 'New project name')}<input name="nomProjet"></label>
+        <label>${T('Élément (repère)', 'Element (mark)')}<select name="element"></select></label>
+        <label data-nouvel-element>${T('Repère du nouvel élément (P1, M1…)', 'New element mark (B1, W1…)')}<input name="nomElement"></label>
+        <div class="af-boutons">${ANNULER()}<button value="oui" class="af-principal">${T('Ranger', 'File')}</button></div></form>`
+    );
+    const f = d.querySelector('form') as HTMLFormElement;
+    const selP = f.elements.namedItem('projet') as HTMLSelectElement;
+    const selE = f.elements.namedItem('element') as HTMLSelectElement;
+    const nouveau = d.querySelector('[data-nouveau]') as HTMLElement;
+    const nouvelElement = d.querySelector('[data-nouvel-element]') as HTMLElement;
+    let lu: Projet | null = null;
+    async function majElements(): Promise<void> {
+      lu = selP.value ? await depot.lire(selP.value) : null;
+      nouveau.hidden = selP.value !== '';
+      const els = lu ? elements(lu) : [];
+      selE.innerHTML =
+        els.map((e) => `<option value="${ech(e.id)}">${ech(cheminDuNoeud(lu as Projet, e.id).join(' › '))}</option>`).join('') +
+        `<option value="">${T('Nouvel élément…', 'New element…')}</option>`;
+      nouvelElement.hidden = selE.value !== '';
+    }
+    selP.addEventListener('change', () => void majElements());
+    selE.addEventListener('change', () => (nouvelElement.hidden = selE.value !== ''));
+    await majElements();
+    d.addEventListener('close', async () => {
+      if (d.returnValue !== 'oui') return;
+      try {
+        const nomP = (f.elements.namedItem('nomProjet') as HTMLInputElement).value.trim();
+        const nomE = (f.elements.namedItem('nomElement') as HTMLInputElement).value.trim();
+        const p = selP.value ? await depot.lire(selP.value) : creerProjet(nomP || T('Projet sans nom', 'Untitled project'));
+        if (!p) return;
+        const elementId = selE.value && selP.value ? selE.value : ajouterElement(p, null, nomE || o.nomApp).id;
+        // Nom de calcul vide : on affiche le nom de l'app, dans la langue de la page.
+        const c = ajouterCalcul(p, elementId, { app: o.app, adresse: fen.location.href.split(/[?#]/)[0], nom: '' }, o.lire(), T('Feuille 1', 'Sheet 1'));
+        await depot.ecrire(p);
+        projet = p;
+        projetId = p.id;
+        calculId = c.id;
+        feuilleId = c.active;
+        majAdresse();
+        dessiner();
+      } catch (e) {
+        signaler(doc, messageDErreur(e));
+      }
+    });
+  }
+
+  async function agir(action: string): Promise<void> {
+    const fid = feuilleId as string;
+    switch (action) {
+      case 'ranger':
+        await ranger();
+        return;
+      case 'dupliquer':
+      case 'copier': {
+        await enregistrer();
+        let nouvelle = '';
+        if (await modifier((_p, c) => (nouvelle = dupliquerFeuille(c, fid, action === 'dupliquer', T('Feuille', 'Sheet')).id))) {
+          feuilleId = nouvelle;
+          majAdresse();
+          chargerFeuille();
+          dessiner();
+        }
+        return;
+      }
+      case 'renommer': {
+        const c = calcul();
+        const nom = await demander(doc, T('Nom de la feuille', 'Sheet name'), c ? trouverFeuille(c, fid).nom : '');
+        if (nom) await modifier((p) => renommer(p, fid, nom));
+        return;
+      }
+      case 'statut':
+        await modifier((_p, c) => definirStatut(c, fid, trouverFeuille(c, fid).statut === 'justifier' ? 'etude' : 'justifier'));
+        return;
+      case 'detacher':
+        await enregistrer();
+        await modifier((_p, c) => detacherFeuille(c, fid));
+        return;
+      case 'supprimer': {
+        const c = calcul();
+        if (!c) return;
+        const nom = trouverFeuille(c, fid).nom;
+        const d = boite(
+          doc,
+          `<form method="dialog"><p>${ech(T(`Supprimer la feuille « ${nom} » ?`, `Delete the sheet “${nom}”?`))}</p>
+           <div class="af-boutons">${ANNULER()}<button value="oui" class="af-principal">${T('Supprimer', 'Delete')}</button></div></form>`
+        );
+        d.addEventListener('close', async () => {
+          if (d.returnValue !== 'oui') return;
+          if (minuterie !== null) clearTimeout(minuterie);
+          minuterie = null;
+          if (await modifier((_p, k) => supprimerFeuille(k, fid))) {
+            feuilleId = calcul()?.active ?? null;
+            majAdresse();
+            chargerFeuille();
+            dessiner();
+          }
+        });
+        return;
+      }
+      case 'sortir':
+        await enregistrer();
+        projet = null;
+        projetId = calculId = feuilleId = null;
+        majAdresse();
+        dessiner();
+        return;
+    }
+  }
+
+  o.conteneur.addEventListener('click', (ev) => {
+    const cible = ev.target as HTMLElement;
+    const onglet = cible.closest<HTMLElement>('[data-af-feuille]');
+    if (onglet) {
+      const id = onglet.dataset.afFeuille as string;
+      if (id !== feuilleId) void changerDeFeuille(id);
+      return;
+    }
+    const rev = cible.closest<HTMLElement>('[data-af-revenir]');
+    if (rev) {
+      const k = rev.dataset.afRevenir as string;
+      const fid = feuilleId as string;
+      void (async () => {
+        await enregistrer();
+        if (await modifier((_p, c) => revenirAOrigine(c, fid, [k]))) chargerFeuille();
+      })();
+      return;
+    }
+    const b = cible.closest<HTMLElement>('[data-af]');
+    if (b) void agir(b.dataset.af as string);
+  });
+
+  // Retour sur l'onglet : le projet a pu changer ailleurs (feuille d'origine
+  // modifiee dans un autre onglet, renommage dans le hub).
+  fen.addEventListener('focus', () => {
+    if (!projetId || minuterie !== null) return;
+    void depot.lire(projetId).then((p) => {
+      if (!p) return;
+      projet = p;
+      chargerFeuille();
+      dessiner();
+    });
+  });
+  fen.addEventListener('pagehide', () => void enregistrer());
+
+  // Ouverture : depuis le hub (parametres) ou hors projet.
+  void (async () => {
+    if (projetId && calculId) {
+      try {
+        projet = await depot.lire(projetId);
+      } catch {
+        projet = null;
+      }
+      const c = calcul();
+      if (!c) {
+        signaler(doc, T('Ce calcul n’existe plus dans ce navigateur : l’app s’ouvre hors projet.', 'This calculation no longer exists in this browser: the app opens outside any project.'));
+        projetId = calculId = feuilleId = null;
+        projet = null;
+        majAdresse();
+      } else {
+        if (!feuilleId || !c.feuilles.some((f) => f.id === feuilleId)) feuilleId = c.active;
+        const d = donneesDeFeuille(c, feuilleId);
+        pret = true;
+        if (d === null) {
+          // Calcul cree depuis le hub : l'app prend ses valeurs par defaut et les ecrit.
+          o.charger(null);
+          await enregistrer();
+        } else {
+          o.charger(d);
+        }
+        majAdresse();
+      }
+    }
+    pret = true;
+    dessiner();
+  })();
+
+  return {
+    signaler() {
+      if (!feuilleId || !pret) return;
+      if (minuterie !== null) clearTimeout(minuterie);
+      minuterie = setTimeout(() => void enregistrer(), delai);
+    },
+    dansUnProjet: () => feuilleId !== null,
+    enregistrer,
+  };
+}

@@ -113,3 +113,4 @@ export {
   type StatutFeuille,
 } from './projets';
 export { depotEnMemoire, depotNavigateur, depotParDefaut, type DepotProjets } from './projets-stockage';
+export { brancherFeuilles, type BarreFeuilles, type OptionsFeuilles } from './feuilles-dom';

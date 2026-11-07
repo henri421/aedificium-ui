@@ -297,13 +297,14 @@ export function ajouterCalcul(
   p: Projet,
   elementId: string,
   app: { app: string; adresse: string; nom: string },
-  donnees: Json
+  donnees: Json,
+  nomFeuille = 'Feuille 1'
 ): Calcul {
   const place = trouverNoeud(p, elementId);
   if (!place || place.noeud.type !== 'element') {
     throw new ErreurProjet('introuvable', `Élément introuvable : ${elementId}`);
   }
-  const f: Feuille = { id: nouvelId(), nom: 'Feuille 1', statut: 'justifier', origine: null, donnees: copie(donnees), surcharges: {} };
+  const f: Feuille = { id: nouvelId(), nom: nomFeuille, statut: 'justifier', origine: null, donnees: copie(donnees), surcharges: {} };
   const c: Calcul = { type: 'calcul', id: nouvelId(), app: app.app, adresse: app.adresse, nom: app.nom, feuilles: [f], active: f.id };
   place.noeud.calculs.push(c);
   toucher(p);
@@ -443,23 +444,23 @@ export function champsSurcharges(c: Calcul, id: string): string[] {
   return Object.keys(trouverFeuille(c, id).surcharges);
 }
 
-/** Nom libre suivant : « Feuille 2 », « Feuille 3 »… */
-function nomSuivant(c: Calcul): string {
+/** Nom libre suivant : « Feuille 2 », « Feuille 3 »… (`Sheet` en anglais). */
+function nomSuivant(c: Calcul, prefixe: string): string {
   let n = c.feuilles.length + 1;
   const pris = new Set(c.feuilles.map((f) => f.nom));
-  while (pris.has(`Feuille ${n}`)) n += 1;
-  return `Feuille ${n}`;
+  while (pris.has(`${prefixe} ${n}`)) n += 1;
+  return `${prefixe} ${n}`;
 }
 
 /**
  * Duplique une feuille, juste apres elle. `liee` (par defaut) : la copie herite
  * de la feuille dupliquee ; sinon c'est une copie complete et independante.
  */
-export function dupliquerFeuille(c: Calcul, id: string, liee = true): Feuille {
+export function dupliquerFeuille(c: Calcul, id: string, liee = true, prefixe = 'Feuille'): Feuille {
   const src = trouverFeuille(c, id);
   const f: Feuille = liee
-    ? { id: nouvelId(), nom: nomSuivant(c), statut: src.statut, origine: src.id, donnees: null, surcharges: {} }
-    : { id: nouvelId(), nom: nomSuivant(c), statut: src.statut, origine: null, donnees: donneesDeFeuille(c, id), surcharges: {} };
+    ? { id: nouvelId(), nom: nomSuivant(c, prefixe), statut: src.statut, origine: src.id, donnees: null, surcharges: {} }
+    : { id: nouvelId(), nom: nomSuivant(c, prefixe), statut: src.statut, origine: null, donnees: donneesDeFeuille(c, id), surcharges: {} };
   c.feuilles.splice(c.feuilles.indexOf(src) + 1, 0, f);
   c.active = f.id;
   return f;
