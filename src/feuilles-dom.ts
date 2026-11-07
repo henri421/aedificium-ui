@@ -81,7 +81,10 @@ const STYLE = `
 .af-barre{font-family:var(--sans,system-ui,sans-serif);font-size:13px;border:1px solid var(--bordure,#c8c6c0);
   border-radius:var(--rayon,4px);background:var(--surface,#fff);padding:8px 10px;margin:0 0 12px}
 .af-chemin{color:var(--texte-faible,#6a6862);font-size:12px;margin-bottom:6px}
+.af-chemin{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:space-between}
 .af-chemin a{color:var(--accent,#1e5aa8)}
+.af-aller{display:flex;gap:6px;align-items:center}
+.af-aller select{font:inherit;font-size:12px;padding:2px 4px;border:1px solid var(--bordure,#c8c6c0);border-radius:var(--rayon-petit,3px);max-width:280px}
 .af-onglets{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
 .af-onglet{font:inherit;padding:4px 10px;border:1px solid var(--bordure,#c8c6c0);border-radius:var(--rayon-petit,3px);
   background:var(--surface-appui,#f2f1ec);color:var(--texte,#1a1a1a);cursor:pointer;display:inline-flex;gap:6px;align-items:baseline}
@@ -184,6 +187,9 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
   // Tant que la feuille n'est pas chargee, la saisie affichee n'est pas la
   // sienne : rien ne doit l'enregistrer dedans.
   let pret = false;
+  // Derniere saisie enregistree : rien n'est reecrit tant qu'elle ne change pas
+  // (une app qui redessine souvent, comme MBT, signale a chaque trace).
+  let dernierEcrit = '';
 
   const calcul = (): Calcul | null => (projet && calculId ? (trouverCalcul(projet, calculId)?.calcul ?? null) : null);
 
@@ -227,13 +233,34 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
     if (!feuilleId || !pret) return;
     const fid = feuilleId;
     const donnees = o.lire();
-    await modifier((_p, c) => ecrireFeuille(c, fid, donnees));
+    const texte = `${fid}:${JSON.stringify(donnees)}`;
+    if (texte === dernierEcrit) return;
+    if (await modifier((_p, c) => ecrireFeuille(c, fid, donnees))) dernierEcrit = texte;
   }
 
   function chargerFeuille(): void {
     const c = calcul();
     if (!c || !feuilleId) return;
-    o.charger(donneesDeFeuille(c, feuilleId));
+    const d = donneesDeFeuille(c, feuilleId);
+    dernierEcrit = `${feuilleId}:${JSON.stringify(d)}`;
+    o.charger(d);
+  }
+
+  /** Les autres calculs du projet, toutes apps confondues, pour y aller d'un clic. */
+  function menuAutresCalculs(p: Projet, actuel: Calcul): string {
+    const options = elements(p).flatMap((e) =>
+      e.calculs
+        .filter((k) => k.id !== actuel.id && k.adresse)
+        .map((k) => {
+          const u = new URL(k.adresse, fen.location.href);
+          u.search = new URLSearchParams({ projet: p.id, calcul: k.id, feuille: k.active }).toString();
+          const libelle = [...cheminDuNoeud(p, e.id), k.nom || k.app].join(' › ');
+          return `<option value="${ech(u.href)}">${ech(libelle)}</option>`;
+        })
+    );
+    if (options.length === 0) return '';
+    return `<label class="af-aller">${T('Aller à', 'Go to')}
+      <select data-af-aller><option value="">${T('autre calcul du projet…', 'other calculation in the project…')}</option>${options.join('')}</select></label>`;
   }
 
   async function changerDeFeuille(id: string): Promise<void> {
@@ -287,7 +314,7 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
           }</div>`
       : '';
     o.conteneur.innerHTML = `<div class="af-barre">
-        <div class="af-chemin"><a href="${ech(hub)}#projets/${ech(projet.id)}" target="_blank" rel="noopener">${chemin}</a></div>
+        <div class="af-chemin"><a href="${ech(hub)}#projets/${ech(projet.id)}" target="_blank" rel="noopener">${chemin}</a>${menuAutresCalculs(projet, c)}</div>
         <div class="af-onglets" role="tablist">${onglets}
           <span class="af-statut${f.statut === 'etude' ? ' af-etude' : ''}">${f.statut === 'justifier' ? T('à justifier', 'to justify') : T('étude', 'study')}</span></div>
         <div class="af-actions">
@@ -421,6 +448,14 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
         return;
     }
   }
+
+  // « Aller à » : on enregistre la saisie en cours, puis on ouvre l'autre calcul.
+  o.conteneur.addEventListener('change', (ev) => {
+    const sel = ev.target as HTMLSelectElement;
+    if (!sel.matches('[data-af-aller]') || !sel.value) return;
+    const cible = sel.value;
+    void enregistrer().then(() => fen.location.assign(cible));
+  });
 
   o.conteneur.addEventListener('click', (ev) => {
     const cible = ev.target as HTMLElement;
