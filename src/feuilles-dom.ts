@@ -168,6 +168,23 @@ function messageDErreur(e: unknown): string {
 /** Libelle par defaut : le chemin, cles separees par « › ». */
 const libelleBrut = (c: string): string => clesDuChemin(c).join(' › ');
 
+/**
+ * Libelle d'un champ lu sur la page : le texte du <label> du champ
+ * [data-champ] ou [data-fixe] de la derniere cle du chemin, ou son aria-label ; une liste [data-liste] prend le titre de son cadre. Chaine vide si le
+ * champ n'est pas a l'ecran. Suit donc la langue de la page sans table a tenir.
+ */
+export function libelleDepuisPage(chemin: string, doc: Pick<Document, 'querySelector'>): string {
+  const cle = clesDuChemin(chemin).at(-1) ?? '';
+  const q = cle.replace(/["\\]/g, '\\$&');
+  const champ = doc.querySelector(`[data-champ="${q}"],[data-fixe="${q}"]`);
+  // Une liste (segments, charges...) se nomme par le titre de son cadre.
+  const liste = champ ? null : doc.querySelector(`[data-liste="${q}"]`);
+  const texte = champ
+    ? (champ.closest('label')?.querySelector('span')?.textContent ?? champ.getAttribute('aria-label') ?? '')
+    : (liste?.closest('fieldset')?.querySelector('legend')?.textContent ?? '');
+  return texte.replace(/\s+/g, ' ').trim();
+}
+
 export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
   const doc = o.conteneur.ownerDocument;
   const fen = doc.defaultView as Window;
@@ -302,7 +319,7 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
       })
       .join('');
     const propres = champsSurcharges(c, f.id);
-    const nom = (k: string): string => (o.libelle ? o.libelle(k) : '') || libelleBrut(k);
+    const nom = (k: string): string => (o.libelle ? o.libelle(k) : '') || libelleDepuisPage(k, doc) || libelleBrut(k);
     const ligneOrigine = f.origine
       ? `<div class="af-propres">${T("D'après", 'Based on')} « ${ech(c.feuilles.find((y) => y.id === f.origine)?.nom ?? '?')} » ·
           ${
