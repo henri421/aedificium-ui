@@ -27,7 +27,10 @@ import {
   detacherFeuille,
   donneesDeFeuille,
   dupliquerFeuille,
+  definirVerdict,
+  verdictDeFeuille,
   ecrireFeuille,
+  type EtatVerdict,
   elements,
   renommer,
   revenirAOrigine,
@@ -56,6 +59,8 @@ export interface OptionsFeuilles {
   libelle?(chemin: string): string;
   /** Champs propres a la feuille courante (l'app peut les marquer a l'ecran). */
   marquer?(chemins: string[]): void;
+  /** Verdict de l'ecran. Par defaut, lu sur la page (`verdictDepuisPage`). */
+  verdict?(): EtatVerdict | null;
   /** Adresse du hub (page des projets). */
   adresseHub?: string;
   depot?: DepotProjets;
@@ -91,6 +96,8 @@ const STYLE = `
 .af-onglet[aria-selected="true"]{background:var(--accent-doux,#eaf1f9);border-color:var(--accent,#1e5aa8);font-weight:600}
 .af-onglet .af-origine{color:var(--texte-faible,#6a6862);font-weight:400;font-size:11px}
 .af-onglet.af-etude{font-style:italic}
+.af-pastille{display:inline-block;min-width:1.2em;margin-right:4px;font-weight:700;text-align:center}
+.af-v-ok{color:var(--ok,#2e7d4f)}.af-v-alerte{color:var(--alerte,#b26a00)}.af-v-ko{color:var(--refus,#b3261e)}.af-v-perime{color:var(--texte-faible,#6a6862)}
 .af-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .af-actions button,.af-dialogue button{font:inherit;font-size:12px;padding:3px 9px;border:1px solid var(--bordure,#c8c6c0);
   border-radius:var(--rayon-petit,3px);background:var(--surface,#fff);color:var(--texte,#1a1a1a);cursor:pointer}
@@ -166,6 +173,14 @@ function messageDErreur(e: unknown): string {
 }
 
 /** Libelle par defaut : le chemin, cles separees par « › ». */
+const pastille = (v: EtatVerdict | 'perime' | null): string => {
+  if (v === null) return '';
+  const fr = { ok: 'Vérifié', alerte: 'À examiner', ko: 'Non vérifié', perime: 'À recalculer : données modifiées' }[v];
+  const en = { ok: 'Verified', alerte: 'To review', ko: 'Not verified', perime: 'To recompute: data changed' }[v];
+  const langue = document.documentElement.lang.startsWith('en') ? en : fr;
+  return `<span class="af-pastille af-v-${v}" title="${langue}" aria-label="${langue}">${{ ok: '✓', alerte: '!', ko: '✗', perime: '↻' }[v]}</span>`;
+};
+
 const libelleBrut = (c: string): string => clesDuChemin(c).join(' › ');
 
 /**
@@ -173,6 +188,32 @@ const libelleBrut = (c: string): string => clesDuChemin(c).join(' › ');
  * [data-champ] ou [data-fixe] de la derniere cle du chemin, ou son aria-label ; une liste [data-liste] prend le titre de son cadre. Chaine vide si le
  * champ n'est pas a l'ecran. Suit donc la langue de la page sans table a tenir.
  */
+const VERDICTS_KO = ['depasse', 'non-ok', 'refus', 'verdict-non-conforme', 'verdict-refus', 'verdict-impossible', 'verdict-instable'];
+const VERDICTS_OK = ['ok', 'verdict-conforme', 'verdict-ok', 'verdict-sans-armatures'];
+
+/**
+ * Verdict affiche par l'app, lu sur la page : le pire de ses cartes `.verdict`.
+ * Rend `null` s'il n'y a rien a conclure, notamment quand une erreur ou un avis
+ * « resultat perime » est visible : l'ecran garde alors l'ancien resultat, qui
+ * ne doit pas passer pour le verdict de la saisie courante. Une classe de
+ * verdict inconnue compte comme une alerte, jamais comme un succes.
+ */
+export function verdictDepuisPage(doc: Pick<Document, 'querySelectorAll'>): EtatVerdict | null {
+  const visibles = (sel: string): Element[] => Array.from(doc.querySelectorAll(sel)).filter((e) => !e.closest('[hidden]'));
+  const alarme = visibles('.erreur,[data-role^="erreur"],[data-role="perime"]');
+  if (alarme.some((e) => (e.textContent ?? '').trim() !== '')) return null;
+  let pire: EtatVerdict | null = null;
+  for (const e of visibles('.verdict')) {
+    const classes = Array.from(e.classList).filter((c) => c !== 'verdict' && c !== 'bloc');
+    if (classes.includes('constat')) continue;
+    if (classes.some((c) => VERDICTS_KO.includes(c))) return 'ko';
+    const favorable = classes.length === 0 || classes.some((c) => VERDICTS_OK.includes(c));
+    if (!favorable) pire = 'alerte';
+    else pire ??= 'ok';
+  }
+  return pire;
+}
+
 export function libelleDepuisPage(chemin: string, doc: Pick<Document, 'querySelector'>): string {
   const cle = clesDuChemin(chemin).at(-1) ?? '';
   const q = cle.replace(/["\\]/g, '\\$&');
@@ -250,16 +291,21 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
     if (!feuilleId || !pret) return;
     const fid = feuilleId;
     const donnees = o.lire();
-    const texte = `${fid}:${JSON.stringify(donnees)}`;
+    const verdict = o.verdict ? o.verdict() : verdictDepuisPage(doc);
+    const texte = `${fid}:${JSON.stringify(donnees)}:${verdict}`;
     if (texte === dernierEcrit) return;
-    if (await modifier((_p, c) => ecrireFeuille(c, fid, donnees))) dernierEcrit = texte;
+    const ok = await modifier((_p, c) => {
+      ecrireFeuille(c, fid, donnees);
+      definirVerdict(c, fid, verdict);
+    });
+    if (ok) dernierEcrit = texte;
   }
 
   function chargerFeuille(): void {
     const c = calcul();
     if (!c || !feuilleId) return;
     const d = donneesDeFeuille(c, feuilleId);
-    dernierEcrit = `${feuilleId}:${JSON.stringify(d)}`;
+    dernierEcrit = `${feuilleId}:${JSON.stringify(d)}:${verdictDeFeuille(c, feuilleId)}`;
     o.charger(d);
   }
 
@@ -315,7 +361,7 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
         const origine = x.origine ? c.feuilles.find((y) => y.id === x.origine)?.nom : null;
         return `<button class="af-onglet${x.statut === 'etude' ? ' af-etude' : ''}" role="tab" aria-selected="${x.id === f.id}" data-af-feuille="${ech(x.id)}"
           title="${x.statut === 'justifier' ? T('À justifier : part dans la note', 'To justify: goes into the report') : T('Étude : hors note', 'Study: not in the report')}">
-          ${ech(x.nom)}${origine ? `<span class="af-origine">← ${ech(origine)}</span>` : ''}</button>`;
+          ${pastille(verdictDeFeuille(c, x.id))}${ech(x.nom)}${origine ? `<span class="af-origine">← ${ech(origine)}</span>` : ''}</button>`;
       })
       .join('');
     const propres = champsSurcharges(c, f.id);

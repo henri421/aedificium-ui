@@ -110,7 +110,11 @@ export {
   type Noeud,
   type Projet,
   type ResumeProjet,
+  definirVerdict,
+  verdictDeFeuille,
+  verdictDuCalcul,
+  type EtatVerdict,
   type StatutFeuille,
 } from './projets';
 export { depotEnMemoire, depotNavigateur, depotParDefaut, type DepotProjets } from './projets-stockage';
-export { brancherFeuilles, libelleDepuisPage, type BarreFeuilles, type OptionsFeuilles } from './feuilles-dom';
+export { brancherFeuilles, libelleDepuisPage, verdictDepuisPage, type BarreFeuilles, type OptionsFeuilles } from './feuilles-dom';
