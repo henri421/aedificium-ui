@@ -42,7 +42,11 @@ export type ElementNote =
   | { type: 'texte'; texte: string };
 /** `taux: null` : verification sans ratio (dispositions constructives…), jugee sur `ok` seul. */
 export interface VerificationNote { nom: string; taux: number | null; ok: boolean; clause?: string }
-export interface CartoucheNote { projet: string; element: string; date: string; norme: string; outil: string }
+/** `version` : version de l'outil et commit de construction (audit R3), affichee apres son nom. */
+export interface CartoucheNote { projet: string; element: string; date: string; norme: string; outil: string; version?: string }
+/** Texte de version d'un outil : « 0.3.0 (a1b2c3d) », ou la version seule sans commit connu. */
+export const versionOutil = (version: string, commit: string): string =>
+  commit && commit !== 'local' ? `${version} (${commit.slice(0, 7)})` : `${version}${commit === 'local' ? ' (local)' : ''}`;
 export interface NoteDeCalcul {
   cartouche: CartoucheNote;
   sections: Partial<Record<Exclude<SectionNote, 'conclusions'>, ElementNote[]>>;
@@ -142,7 +146,7 @@ export function noteDeCalculHtml(note: NoteDeCalcul, styles = ''): string {
 <style>${styles}
 ${STYLE_NOTE}
 ${marge}</style></head><body>
-<header><h1>${m.note}</h1><p>${m.projet}${m.deuxPoints} ${n(c.projet)}</p><p>${m.element}${m.deuxPoints} ${n(c.element)}</p><p>${m.norme}${m.deuxPoints} ${n(c.norme)}</p><p>${m.date}${m.deuxPoints} ${n(c.date)} · ${m.outil} ${n(c.outil)}</p></header>
+<header><h1>${m.note}</h1><p>${m.projet}${m.deuxPoints} ${n(c.projet)}</p><p>${m.element}${m.deuxPoints} ${n(c.element)}</p><p>${m.norme}${m.deuxPoints} ${n(c.norme)}</p><p>${m.date}${m.deuxPoints} ${n(c.date)} · ${m.outil} ${n(c.outil)}${c.version ? ` ${echapper(c.version)}` : ''}</p></header>
 ${(note.avertissements ?? []).map((a) => `<p class="avertissement">${n(a)}</p>`).join('')}
 ${corps}
 </body></html>`;

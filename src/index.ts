@@ -33,7 +33,7 @@ export {
   type Langue,
   type RegleDePhrase,
 } from './langue';
-export { SECTIONS_NOTE, STYLE_NOTE, noteDeCalculHtml, type CartoucheNote, type ElementNote, type NoteDeCalcul, type SectionNote, type VerificationNote } from './note';
+export { SECTIONS_NOTE, STYLE_NOTE, noteDeCalculHtml, versionOutil, type CartoucheNote, type ElementNote, type NoteDeCalcul, type SectionNote, type VerificationNote } from './note';
 export {
   ETAT_EDITEUR_INITIAL,
   aimanter,

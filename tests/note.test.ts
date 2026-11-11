@@ -13,6 +13,7 @@ import {
   SECTIONS_NOTE,
   STYLE_NOTE,
   noteDeCalculHtml,
+  versionOutil,
   texteVisible,
   type ElementNote,
   type NoteDeCalcul,
@@ -135,6 +136,14 @@ describe('noteDeCalculHtml — cartouche et document', () => {
     const t = texteVisible(html);
     for (const v of Object.values(CARTOUCHE)) expect(t).toContain(v);
     expect(html).toMatch(/<title>[^<]*Poutre P12, niveau R\+1[^<]*<\/title>/);
+  });
+
+  it('version de l outil et commit de construction (audit R3)', () => {
+    const avec = noteDeCalculHtml({ ...noteComplete(), cartouche: { ...CARTOUCHE, version: versionOutil('0.3.0', '405bd612156ab5d6') } }, '');
+    expect(texteVisible(avec)).toContain('poutres-continues 0.3.0 (405bd61)');
+    expect(versionOutil('1.7.0', 'local')).toBe('1.7.0 (local)');
+    expect(versionOutil('1.7.0', '')).toBe('1.7.0');
+    expect(texteVisible(html)).not.toContain('(local)');
   });
 
   it('document autonome : doctype, lang fr, aucun script ni ressource externe', () => {
