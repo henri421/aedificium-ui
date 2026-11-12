@@ -118,3 +118,4 @@ export {
 } from './projets';
 export { depotEnMemoire, depotNavigateur, depotParDefaut, type DepotProjets } from './projets-stockage';
 export { brancherFeuilles, libelleDepuisPage, verdictDepuisPage, type BarreFeuilles, type OptionsFeuilles } from './feuilles-dom';
+export { avertissement2eGeneration } from './generation';
