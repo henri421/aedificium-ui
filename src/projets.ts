@@ -12,7 +12,7 @@
  *
  * Ce module est pur (aucun acces au DOM ni au stockage) et sans import : le
  * hub, qui n'a pas de compilation, en charge une copie dont les types sont
- * retires (`_banc-local/copier-projets.mjs`). Pas d'enum, pas de propriete de
+ * retires (`scripts/copier-projets.mjs`). Pas d'enum, pas de propriete de
  * parametre : le retrait des types doit suffire.
  */
 
