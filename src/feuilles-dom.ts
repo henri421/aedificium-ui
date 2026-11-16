@@ -43,6 +43,7 @@ import {
   type Projet,
 } from './projets';
 import { depotParDefaut, type DepotProjets } from './projets-stockage';
+import { cartoucheDuProjet, type CartoucheProjet } from './cartouche-projet';
 
 export interface OptionsFeuilles {
   /** Identifiant de l'app : nom de son depot (`mur-en-l`). */
@@ -61,6 +62,12 @@ export interface OptionsFeuilles {
   marquer?(chemins: string[]): void;
   /** Verdict de l'ecran. Par defaut, lu sur la page (`verdictDepuisPage`). */
   verdict?(): EtatVerdict | null;
+  /**
+   * Cartouche de la feuille ouverte (nom du projet, repere de l'element),
+   * appele a chaque chargement d'une feuille de projet : l'app en remplit ses
+   * champs de cartouche au lieu de les faire ressaisir (audit I15).
+   */
+  cartouche?(c: CartoucheProjet): void;
   /** Adresse du hub (page des projets). */
   adresseHub?: string;
   depot?: DepotProjets;
@@ -307,6 +314,10 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
     const d = donneesDeFeuille(c, feuilleId);
     dernierEcrit = `${feuilleId}:${JSON.stringify(d)}:${verdictDeFeuille(c, feuilleId)}`;
     o.charger(d);
+    if (o.cartouche && projet && calculId) {
+      const k = cartoucheDuProjet(projet, calculId, feuilleId);
+      if (k !== null) o.cartouche(k);
+    }
   }
 
   /** Les autres calculs du projet, toutes apps confondues, pour y aller d'un clic. */
