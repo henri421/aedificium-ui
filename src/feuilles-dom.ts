@@ -64,8 +64,9 @@ export interface OptionsFeuilles {
   verdict?(): EtatVerdict | null;
   /**
    * Cartouche de la feuille ouverte (nom du projet, repere de l'element),
-   * appele a chaque chargement d'une feuille de projet : l'app en remplit ses
-   * champs de cartouche au lieu de les faire ressaisir (audit I15).
+   * appele a chaque chargement d'une feuille de projet (audit I15). Par
+   * defaut, `remplirCartouche` : les champs `input[data-role="projet"]` et
+   * `input[data-role="element"]` de la page sont remplis.
    */
   cartouche?(c: CartoucheProjet): void;
   /** Adresse du hub (page des projets). */
@@ -82,6 +83,22 @@ export interface BarreFeuilles {
   dansUnProjet(): boolean;
   /** Enregistre tout de suite la saisie en attente. */
   enregistrer(): Promise<void>;
+  /** Cartouche de la feuille de projet ouverte ; null hors projet. */
+  cartouche(): CartoucheProjet | null;
+}
+
+/**
+ * Remplit les champs de cartouche de la page (`input[data-role="projet"]`,
+ * `input[data-role="element"]`) et emet `input` sur chacun, pour que l'app
+ * garde la valeur comme si elle avait ete saisie.
+ */
+export function remplirCartouche(doc: Document, c: CartoucheProjet): void {
+  for (const [role, valeur] of [['projet', c.projet], ['element', c.element]] as const) {
+    const champ = doc.querySelector<HTMLInputElement>(`input[data-role="${role}"]`);
+    if (champ === null || champ.value === valeur) continue;
+    champ.value = valeur;
+    champ.dispatchEvent(new Event('input', { bubbles: true }));
+  }
 }
 
 const T = (fr: string, en: string): string => (langueCourante() === 'en' ? en : fr);
@@ -314,9 +331,9 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
     const d = donneesDeFeuille(c, feuilleId);
     dernierEcrit = `${feuilleId}:${JSON.stringify(d)}:${verdictDeFeuille(c, feuilleId)}`;
     o.charger(d);
-    if (o.cartouche && projet && calculId) {
+    if (projet && calculId) {
       const k = cartoucheDuProjet(projet, calculId, feuilleId);
-      if (k !== null) o.cartouche(k);
+      if (k !== null) (o.cartouche ?? ((x: CartoucheProjet) => remplirCartouche(doc, x)))(k);
     }
   }
 
@@ -606,5 +623,6 @@ export function brancherFeuilles(o: OptionsFeuilles): BarreFeuilles {
     },
     dansUnProjet: () => feuilleId !== null,
     enregistrer,
+    cartouche: () => (projet && calculId && feuilleId ? cartoucheDuProjet(projet, calculId, feuilleId) : null),
   };
 }

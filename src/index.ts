@@ -118,5 +118,5 @@ export {
 } from './projets';
 export { depotEnMemoire, depotNavigateur, depotParDefaut, type DepotProjets } from './projets-stockage';
 export { cartoucheDuProjet, type CartoucheProjet } from './cartouche-projet';
-export { brancherFeuilles, libelleDepuisPage, verdictDepuisPage, type BarreFeuilles, type OptionsFeuilles } from './feuilles-dom';
+export { brancherFeuilles, remplirCartouche, libelleDepuisPage, verdictDepuisPage, type BarreFeuilles, type OptionsFeuilles } from './feuilles-dom';
 export { avertissement2eGeneration } from './generation';
