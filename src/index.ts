@@ -120,3 +120,4 @@ export { depotEnMemoire, depotNavigateur, depotParDefaut, type DepotProjets } fr
 export { cartoucheDuProjet, type CartoucheProjet } from './cartouche-projet';
 export { brancherFeuilles, remplirCartouche, libelleDepuisPage, verdictDepuisPage, type BarreFeuilles, type OptionsFeuilles } from './feuilles-dom';
 export { avertissement2eGeneration } from './generation';
+export { AN_LU, ANNEXE_LU_VERIFIEE, ANNEXES_NATIONALES, avertissementAnnexeLu, libelleAnnexe, lireAnnexe, optionsAnnexe, sourceLu, valeurLu, type AnnexeNationale, type ValeurLu } from './annexe';
