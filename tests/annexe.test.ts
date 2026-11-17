@@ -11,6 +11,7 @@ import {
   lireAnnexe,
   optionsAnnexe,
   sourceLu,
+  traduireSource,
   valeurLu,
 } from '../src/index';
 
@@ -72,5 +73,13 @@ describe('annexes nationales', () => {
     expect(avertissementAnnexeLu()).toMatch(/^Annexe nationale luxembourgeoise.*présumées.*modifier/);
     definirLangue('en');
     expect(avertissementAnnexeLu()).toMatch(/^Luxembourg National Annex.*presumed.*change/);
+  });
+
+  it('traduireSource : intacte en francais, sans accent en anglais', () => {
+    const s = sourceLu('EN 1992-1-1', 'tableau 2.1N', true);
+    expect(traduireSource(s)).toBe(s);
+    definirLangue('en');
+    expect(traduireSource(s)).toBe('ILNAS-EN 1992-1-1/AN-LU:2020, Table 2.1N: recommended value presumed retained, not checked against the annex');
+    expect(traduireSource('EN 1992-1-1:2004, valeur recommandée, tableau 2.1N')).toBe('EN 1992-1-1:2004, recommended value, Table 2.1N');
   });
 });

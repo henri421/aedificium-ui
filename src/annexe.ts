@@ -83,3 +83,24 @@ export function avertissementAnnexeLu(): string {
     ? 'Luxembourg National Annex: values pre-filled and presumed, not yet checked against the ILNAS text. Check them; you can change each one.'
     : 'Annexe nationale luxembourgeoise : valeurs préremplies et présumées, pas encore vérifiées sur le texte de l’ILNAS. Contrôlez-les ; vous pouvez modifier chacune.';
 }
+
+/**
+ * Source d'un profil telle qu'elle s'affiche : traduite mot a mot en anglais (les profils
+ * ecrivent leurs sources en francais), intacte en francais.
+ */
+export function traduireSource(source: string): string {
+  if (langueCourante() !== 'en') return source;
+  return source
+    .replace(/valeur recommandée présumée retenue/g, 'recommended value presumed retained')
+    .replace(/valeur présumée/g, 'presumed value')
+    .replace(/, non vérifiée sur l’annexe/g, ', not checked against the annex')
+    .replace(/valeurs? recommandées?/g, 'recommended value')
+    .replace(/valeur imposée par l’utilisateur/g, 'value imposed by the user')
+    .replace(/valeur maximale recommandée/g, 'maximum recommended value')
+    .replace(/valeur minimale recommandée/g, 'minimum recommended value')
+    .replace(/\btableaux?\b/g, 'Table')
+    .replace(/\bnote\b/g, 'Note')
+    .replace(/\bannexe\b/g, 'Annex')
+    .replace(/\bprofil\b/g, 'profile')
+    .replace(/ : /g, ': ');
+}
