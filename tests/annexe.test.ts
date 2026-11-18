@@ -75,6 +75,14 @@ describe('annexes nationales', () => {
     expect(avertissementAnnexeLu()).toMatch(/^Luxembourg National Annex.*presumed.*change/);
   });
 
+  it('avertissement d un outil a profil fixe : ne promet pas de modifier chaque coefficient', () => {
+    expect(avertissementAnnexeLu(false)).toMatch(/^Annexe nationale luxembourgeoise.*présumés.*ne permet pas de les modifier/);
+    expect(avertissementAnnexeLu(false)).not.toMatch(/vous pouvez modifier/);
+    definirLangue('en');
+    expect(avertissementAnnexeLu(false)).toMatch(/^Luxembourg National Annex.*presumed.*does not let you change/);
+    expect(avertissementAnnexeLu(false)).not.toMatch(/you can change/);
+  });
+
   it('traduireSource : intacte en francais, sans accent en anglais', () => {
     const s = sourceLu('EN 1992-1-1', 'tableau 2.1N', true);
     expect(traduireSource(s)).toBe(s);

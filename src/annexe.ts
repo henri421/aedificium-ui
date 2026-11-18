@@ -76,10 +76,21 @@ export function valeurLu(
     : { valeur: recommandee.valeur, source: sourceLu(partie, clause, true) };
 }
 
-/** Avertissement affiche a l'ecran et en tete de la note quand le profil `lu` est choisi. */
-export function avertissementAnnexeLu(): string {
+/**
+ * Avertissement affiche a l'ecran et en tete de la note quand le profil `lu` est choisi.
+ * `modifiables` : faux pour un outil ou l'utilisateur choisit le profil sans pouvoir en
+ * changer les coefficients un a un (outils EC7, mur en L) ; la phrase ne lui promet
+ * alors pas une modification qu'il ne peut pas faire.
+ */
+export function avertissementAnnexeLu(modifiables = true): string {
   if (ANNEXE_LU_VERIFIEE) return '';
-  return langueCourante() === 'en'
+  const en = langueCourante() === 'en';
+  if (!modifiables) {
+    return en
+      ? 'Luxembourg National Annex: factors presumed, not yet checked against the ILNAS text. Check them in the calculation report; this tool does not let you change them one by one.'
+      : 'Annexe nationale luxembourgeoise : coefficients présumés, pas encore vérifiés sur le texte de l’ILNAS. Contrôlez-les dans la note de calcul ; cet outil ne permet pas de les modifier un à un.';
+  }
+  return en
     ? 'Luxembourg National Annex: values pre-filled and presumed, not yet checked against the ILNAS text. Check them; you can change each one.'
     : 'Annexe nationale luxembourgeoise : valeurs préremplies et présumées, pas encore vérifiées sur le texte de l’ILNAS. Contrôlez-les ; vous pouvez modifier chacune.';
 }
