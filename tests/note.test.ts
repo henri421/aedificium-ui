@@ -170,6 +170,14 @@ describe('noteDeCalculHtml — cartouche et document', () => {
     expect(css).toMatch(/content:\s*"[^"]*Poutre P12, niveau R\+1/);
   });
 
+  it('bouton imprimer / enregistrer en PDF, masque a l impression', () => {
+    expect(html).toContain('<button type="button" onclick="window.print()">Imprimer / enregistrer en PDF</button>');
+    expect(texteVisible(html)).toContain('Enregistrer au format PDF');
+    expect(STYLE_NOTE).toContain('@media print { body { max-width: none; padding: 0; } .outils-note { display: none; } }');
+    // Couleurs des avertissements gardees dans le PDF.
+    expect(STYLE_NOTE).toContain('print-color-adjust: exact');
+  });
+
   it('le cartouche dans la regle @page est echappe pour une chaine CSS', () => {
     const n = noteComplete();
     n.cartouche = { ...CARTOUCHE, projet: 'Projet "A" \\ B', element: '</style><b>x</b>' };

@@ -30,8 +30,8 @@ const TITRES_EN: Record<SectionNote, string> = {
 /** Textes fixes de la note, selon la langue courante. */
 function mots() {
   return langueCourante() === 'en'
-    ? { note: 'Calculation note', projet: 'Project', element: 'Element', norme: 'Standard', date: 'Date', outil: 'tool', verification: 'Check', clause: 'Clause', taux: 'Ratio', verdict: 'Verdict', satisfaite: 'satisfied', nonSatisfaite: 'not satisfied', determinante: 'Governing check', page: 'page', deuxPoints: ':' }
-    : { note: 'Note de calcul', projet: 'Projet', element: 'Élément', norme: 'Norme', date: 'Date', outil: 'outil', verification: 'Vérification', clause: 'Clause', taux: 'Taux', verdict: 'Verdict', satisfaite: 'satisfaite', nonSatisfaite: 'non satisfaite', determinante: 'Vérification déterminante', page: 'page', deuxPoints: ' :' };
+    ? { note: 'Calculation note', projet: 'Project', element: 'Element', norme: 'Standard', date: 'Date', outil: 'tool', verification: 'Check', clause: 'Clause', taux: 'Ratio', verdict: 'Verdict', satisfaite: 'satisfied', nonSatisfaite: 'not satisfied', determinante: 'Governing check', page: 'page', deuxPoints: ':', imprimer: 'Print / save as PDF', aidePdf: 'In the print dialog, choose “Save as PDF” as the destination.' }
+    : { note: 'Note de calcul', projet: 'Projet', element: 'Élément', norme: 'Norme', date: 'Date', outil: 'outil', verification: 'Vérification', clause: 'Clause', taux: 'Taux', verdict: 'Verdict', satisfaite: 'satisfaite', nonSatisfaite: 'non satisfaite', determinante: 'Vérification déterminante', page: 'page', deuxPoints: ' :', imprimer: 'Imprimer / enregistrer en PDF', aidePdf: 'Dans la fenêtre d’impression, choisissez « Enregistrer au format PDF » comme destination.' };
 }
 export type ElementNote =
   | { type: 'bloc'; bloc: BlocResultat }
@@ -69,7 +69,12 @@ body {
   font-family: var(--sans);
   font-size: 10.5pt;
   line-height: 1.45;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
+.outils-note { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em 1em; margin: 0 0 1.2em; padding: 0.6em 0.8em; background: var(--surface-appui); border: 1px solid var(--bordure-douce); border-radius: 4px; }
+.outils-note button { font: inherit; font-weight: 600; padding: 0.35em 0.9em; cursor: pointer; color: var(--texte); background: var(--surface); border: 1px solid var(--bordure); border-radius: 4px; }
+.outils-note span { color: var(--texte-faible); font-size: 0.9em; }
 header { margin-bottom: 1.2em; border-bottom: 2px solid var(--bordure); padding-bottom: 0.6em; }
 header h1 { margin: 0 0 0.4em; font-size: 1.6em; }
 header p { margin: 0.1em 0; color: var(--texte-doux); }
@@ -88,7 +93,7 @@ th, td { text-align: left; padding: 0.3em 0.5em; border-bottom: 1px solid var(--
 th { font-family: var(--sans); font-weight: 600; border-bottom-color: var(--bordure); }
 .bloc table td:first-child { font-family: var(--mono); white-space: nowrap; }
 ul { margin: 0.5em 0; padding-left: 1.4em; }
-@media print { body { max-width: none; padding: 0; } }`;
+@media print { body { max-width: none; padding: 0; } .outils-note { display: none; } }`;
 
 /** Raccourci d'echappement du texte affiche. */
 const n = notationHtml;
@@ -146,6 +151,7 @@ export function noteDeCalculHtml(note: NoteDeCalcul, styles = ''): string {
 <style>${styles}
 ${STYLE_NOTE}
 ${marge}</style></head><body>
+<div class="outils-note"><button type="button" onclick="window.print()">${m.imprimer}</button><span>${m.aidePdf}</span></div>
 <header><h1>${m.note}</h1><p>${m.projet}${m.deuxPoints} ${n(c.projet)}</p><p>${m.element}${m.deuxPoints} ${n(c.element)}</p><p>${m.norme}${m.deuxPoints} ${n(c.norme)}</p><p>${m.date}${m.deuxPoints} ${n(c.date)} · ${m.outil} ${n(c.outil)}${c.version ? ` ${echapper(c.version)}` : ''}</p></header>
 ${(note.avertissements ?? []).map((a) => `<p class="avertissement">${n(a)}</p>`).join('')}
 ${corps}
