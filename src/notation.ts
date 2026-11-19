@@ -244,3 +244,12 @@ export function notationTexte(source: string): string {
     })
     .join('');
 }
+
+/** Notation en segments prets a composer (PDF) : texte converti, indice ou exposant. */
+export function notationSegments(source: string): { texte: string; position: 'normal' | 'indice' | 'exposant' }[] {
+  return segmenter(source).map((segment) => {
+    if (segment.type === 'texte') return { texte: convertirTexte(segment.contenu), position: 'normal' as const };
+    if (segment.type === 'indice') return { texte: convertirGrecques(segment.contenu), position: 'indice' as const };
+    return { texte: segment.contenu, position: 'exposant' as const };
+  });
+}

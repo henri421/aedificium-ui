@@ -9,7 +9,8 @@
 
 export { JETONS, valeursDesJetons } from './jetons';
 export { echapper, lireNombre, nombreAffiche, nombreFr, tauxAffiche, tauxFr } from './format';
-export { notationHtml, notationSvg, notationTexte } from './notation';
+export { notationHtml, notationSegments, notationSvg, notationTexte } from './notation';
+export { definitionNotePdf, noteDeCalculPdf, svgPourPdf, telechargerNotePdf, textePdf, type DefinitionPdf } from './note-pdf';
 export { svgAutonome } from './svg';
 export {
   AVERTISSEMENT_TYPE,

@@ -28,7 +28,7 @@ const TITRES_EN: Record<SectionNote, string> = {
 };
 
 /** Textes fixes de la note, selon la langue courante. */
-function mots() {
+export function motsNote() {
   return langueCourante() === 'en'
     ? { note: 'Calculation note', projet: 'Project', element: 'Element', norme: 'Standard', date: 'Date', outil: 'tool', verification: 'Check', clause: 'Clause', taux: 'Ratio', verdict: 'Verdict', satisfaite: 'satisfied', nonSatisfaite: 'not satisfied', determinante: 'Governing check', page: 'page', deuxPoints: ':', imprimer: 'Print / save as PDF', aidePdf: 'In the print dialog, choose “Save as PDF” as the destination.' }
     : { note: 'Note de calcul', projet: 'Projet', element: 'Élément', norme: 'Norme', date: 'Date', outil: 'outil', verification: 'Vérification', clause: 'Clause', taux: 'Taux', verdict: 'Verdict', satisfaite: 'satisfaite', nonSatisfaite: 'non satisfaite', determinante: 'Vérification déterminante', page: 'page', deuxPoints: ' :', imprimer: 'Imprimer / enregistrer en PDF', aidePdf: 'Dans la fenêtre d’impression, choisissez « Enregistrer au format PDF » comme destination.' };
@@ -128,7 +128,7 @@ function conclusions(v: VerificationNote[]): string {
   const det = chiffrees.length > 0 ? chiffrees.reduce((a, b) => (cle(b) > cle(a) ? b : a)) : null;
   const ok = (x: VerificationNote) => x.ok && (x.taux === null || Number.isFinite(x.taux));
   const taux = (x: VerificationNote) => (x.taux === null ? '—' : tauxAffiche(x.taux));
-  const m = mots();
+  const m = motsNote();
   const ligneDet = det === null ? '' : `<p>${m.determinante}${m.deuxPoints} ${n(det.nom)} (${m.taux.toLowerCase()} ${taux(det)})</p>`;
   return `<table><tr><th>${m.verification}</th><th>${m.clause}</th><th>${m.taux}</th><th>${m.verdict}</th></tr>${v.map((x) => `<tr><td>${n(x.nom)}</td><td>${n(x.clause ?? '')}</td><td>${taux(x)}</td><td>${ok(x) ? m.satisfaite : m.nonSatisfaite}</td></tr>`).join('')}</table>${ligneDet}`;
 }
@@ -136,7 +136,7 @@ function conclusions(v: VerificationNote[]): string {
 /** Compose la note de calcul HTML complete. */
 export function noteDeCalculHtml(note: NoteDeCalcul, styles = ''): string {
   const c = note.cartouche;
-  const m = mots();
+  const m = motsNote();
   const en = langueCourante() === 'en';
   let i = 0;
   // Sections dans l'ordre fixe ; une section sans contenu disparait.
