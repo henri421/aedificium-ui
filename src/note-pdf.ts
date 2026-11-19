@@ -78,13 +78,17 @@ function bloc(b: BlocResultat): Contenu[] {
   const avecSymbole = b.lignes.some((l) => l.symbole !== '');
   const sortie: Contenu[] = [{ ...(textePdf(b.titre, { style: 'h3' }) as object) }];
   if (b.lignes.length > 0) {
+    // Valeurs longues (references d'annexe...) : colonne large, retour a la
+    // ligne permis ; sinon elles debordaient de la page.
+    const longues = b.lignes.some((l) => l.valeur.length > 28);
+    const largeurs = longues ? (avecSymbole ? [70, '30%', '*'] : ['35%', '*']) : (avecSymbole ? [70, '*', 'auto'] : ['*', 'auto']);
     sortie.push({
       table: {
-        widths: avecSymbole ? [70, '*', 'auto'] : ['*', 'auto'],
+        widths: largeurs,
         body: b.lignes.map((l) => [
           ...(avecSymbole ? [textePdf(l.symbole, { color: C.doux })] : []),
           textePdf(l.libelle),
-          textePdf(l.valeur, { alignment: 'right', noWrap: true }),
+          textePdf(l.valeur, { alignment: 'right', noWrap: !longues }),
         ]),
       },
       layout: filets(false),
@@ -128,7 +132,9 @@ function figure(e: Extract<ElementNote, { type: 'figure' }>, svg: string | undef
   if (!svg) return '';
   const largeur = /viewBox="[\d.\s-]+ ([\d.]+) ([\d.]+)"/.exec(svg);
   const ratio = largeur ? Number(largeur[2]) / Number(largeur[1]) : 0.6;
-  const w = Math.min(400, 520 / Math.max(1, ratio * 1.4));
+  // Largeur 380 pt au plus, hauteur 240 pt au plus : une figure tient dans une
+  // demi-page et laisse moins de blanc quand elle passe a la page suivante.
+  const w = Math.min(380, 240 / ratio);
   return {
     stack: [
       { svg, width: w, alignment: 'center' },
@@ -173,7 +179,8 @@ function conclusions(v: VerificationNote[]): Contenu[] {
       layout: 'noBorders',
     });
   }
-  return sortie;
+  // Tableau et encadre de la determinante ensemble : jamais l'encadre seul en page.
+  return [{ stack: sortie, unbreakable: v.length <= 20 }];
 }
 
 /**
@@ -221,14 +228,17 @@ export function definitionNotePdf(note: NoteDeCalcul, figures: (svg: string) => 
       : (note.sections[s.cle] ?? []).filter((e) => !(e.type === 'liste' && e.items.length === 0)).flatMap((e) => element(e, figures));
     if (corps.length === 0) continue;
     i += 1;
+    // Titre lie a son premier bloc : jamais seul en bas de page.
+    const [premier, ...reste] = corps;
     contenu.push({
       stack: [
         { text: `${i}. ${en ? TITRES_EN[s.cle] : s.titre}`, style: 'h2' },
         { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 511, y2: 0, lineWidth: 0.8, lineColor: C.accent }], margin: [0, 0, 0, 8] },
+        premier,
       ],
-      headlineLevel: 1,
+      unbreakable: true,
     });
-    contenu.push(...corps);
+    contenu.push(...reste);
   }
   const petit = { fontSize: 7.5, color: C.faible };
   return {
@@ -265,7 +275,10 @@ const PROPRIETES = ['fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-da
  */
 export function svgPourPdf(svg: string, styles: string, doc: Document = document): string {
   const hote = doc.createElement('div');
-  hote.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;visibility:hidden';
+  // Hors ecran mais visible : un `visibility:hidden` serait herite par chaque
+  // trace, que la boucle ci-dessous retirerait alors (figures vides).
+  hote.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;pointer-events:none';
+  hote.setAttribute('aria-hidden', 'true');
   hote.innerHTML = `<style>${styles}</style>${svg}`;
   doc.body.appendChild(hote);
   try {
