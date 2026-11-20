@@ -61,7 +61,35 @@ Seule exception à cette règle : l'éditeur de nœuds et de barres, commun à M
 equilibre-statique (`src/editeur.ts` pour la logique pure, `src/editeur-dom.ts`
 pour le branchement des événements). Il ne dessine rien et ne garde pas le modèle :
 il traduit le pointeur et le clavier en actions ; l'app tient l'état et redessine.
-Voir [`PLAN.md`](PLAN.md).
+
+## Classeur Excel (v1.15.0)
+
+`classeurDeCalcul(donnees)` rend le classeur .xlsx d'un calcul, au même format et au
+même style dans toutes les apps. L'app ne fournit que des données : les saisies, les
+lignes de calcul (formule Excel avec noms définis, valeur du noyau en cache) et les
+vérifications. La mise en page vit ici :
+
+- une seule feuille, avec les blocs Données, Calcul et Vérifications sous le cartouche ;
+- six colonnes fixes ;
+- formules lisibles (`=MIN(t_coh+t_frot+t_arm,t_plaf)`), recalculées par Excel ;
+- taux arrondi vers le verdict, et verdict coloré qui suit les données ;
+- saisies sur fond bleu pâle, seules modifiables (protection sans mot de passe) ;
+- Calibri pour le texte et Consolas pour les nombres, couleurs des jetons communs ;
+- impression en A4 portrait, sur une page en largeur, avec en-tête, pied de page et
+  sauts de page entre les groupes ;
+- aucun texte d'explication.
+
+Le générateur refuse, en nommant la fautive :
+- une fonction hors de `FONCTIONS_XLSX_PERMISES` ;
+- un nom inconnu ;
+- un renvoi à une autre feuille ;
+- une valeur non finie.
+
+`verifierGabaritXlsx(octets)` sert au test de chaque app, et `nomDeFichierXlsx` donne le
+nom du fichier.
+
+Sans dépendance : l'archive ZIP est écrite par `src/xlsx.ts`. La référence de rendu est
+la maquette validée le 2026-11-20 (fiche 11.3 de l'étape 11).
 
 ## Utilisation
 

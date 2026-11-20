@@ -23,6 +23,21 @@ export {
   type OptionsControle,
 } from './controle';
 export { blocsEnTexte, csv, resultatsEnCsv, type BlocResultat, type LigneResultat } from './csv';
+export { colonneXlsx, crc32, lireZipSansCompression, zipSansCompression } from './xlsx';
+export {
+  FONCTIONS_XLSX_PERMISES,
+  LARGEURS_COLONNES_XLSX,
+  LIGNES_PAR_PAGE_XLSX,
+  classeurDeCalcul,
+  nomDeFichierXlsx,
+  verifierGabaritXlsx,
+  type CartoucheXlsx,
+  type ClasseurCalcul,
+  type GroupeXlsx,
+  type LigneCalculXlsx,
+  type LigneDonneeXlsx,
+  type VerificationXlsx,
+} from './xlsx-gabarit';
 export { ouvrirOuTelecharger, telecharger } from './navigateur';
 export {
   definirLangue,
