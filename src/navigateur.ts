@@ -3,9 +3,9 @@
  * Aucune donnee ne quitte le poste : il n'y a ni serveur ni requete reseau.
  */
 
-/** Telecharge un contenu texte sous le nom donne. */
-export function telecharger(nomFichier: string, contenu: string, typeMime: string): void {
-  const blob = new Blob([contenu], { type: typeMime });
+/** Telecharge un contenu, texte ou octets (classeur .xlsx), sous le nom donne. */
+export function telecharger(nomFichier: string, contenu: string | Uint8Array, typeMime: string): void {
+  const blob = new Blob([contenu as BlobPart], { type: typeMime });
   const url = URL.createObjectURL(blob);
   const lien = document.createElement('a');
   lien.href = url;

@@ -38,6 +38,7 @@ export {
   type LigneDonneeXlsx,
   type VerificationXlsx,
 } from './xlsx-gabarit';
+export { ecartsDeConcordance, evaluerFormuleXlsx, type EcartConcordance } from './xlsx-formules';
 export { ouvrirOuTelecharger, telecharger } from './navigateur';
 export {
   definirLangue,

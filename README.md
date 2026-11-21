@@ -88,6 +88,11 @@ Le générateur refuse, en nommant la fautive :
 `verifierGabaritXlsx(octets)` sert au test de chaque app, et `nomDeFichierXlsx` donne le
 nom du fichier.
 
+**Concordance (v1.16.0).** `ecartsDeConcordance(donnees)` évalue chaque formule à partir
+des seules saisies, avec un petit évaluateur aux priorités d'Excel
+(`evaluerFormuleXlsx`). Il rend les lignes dont le résultat diffère de la valeur du noyau.
+Le test de chaque app exige `[]` : l'Excel dit ainsi la même chose que l'app.
+
 Sans dépendance : l'archive ZIP est écrite par `src/xlsx.ts`. La référence de rendu est
 la maquette validée le 2026-11-20 (fiche 11.3 de l'étape 11).
 

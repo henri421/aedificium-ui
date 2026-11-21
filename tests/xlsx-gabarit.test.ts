@@ -373,6 +373,14 @@ describe('impression', () => {
     const derniere = Math.max(...[...l.cellules.values()].map((x) => x.ligne));
     expect(derniere - debut + 1).toBeLessThanOrEqual(LIGNES_PAR_PAGE_XLSX);
   });
+  it('compte la hauteur des lignes, pas leur nombre : les verifications ne restent pas seules en page 2', () => {
+    // 51 lignes (< 52), mais trois titres de bloc hauts : la page deborde (constate dans Excel).
+    const c = classeurExemple();
+    const l = lu({ ...c, calcul: [...c.calcul, ...classeurLong(1, 4).calcul.slice(-1)] });
+    const sauts = [...l.feuille.matchAll(/<brk id="(\d+)"[^>]*man="1"/g)].map((m) => Number(m[1]));
+    expect(sauts).toHaveLength(1);
+    expect(texte(ligneDe(l, sauts[0] + 1).A)).toBe('Vérifications');
+  });
   it('un groupe plus long qu une page ne fait pas echouer la generation', () => {
     const l = lu(classeurLong(1, LIGNES_PAR_PAGE_XLSX + 20));
     expect(l.feuille).toContain('<sheetData>');

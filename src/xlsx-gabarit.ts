@@ -399,6 +399,15 @@ function tauxVersVerdict(s: number, r: number): number {
   return brut < 1 ? Math.floor(brut * 1000) / 1000 : Math.ceil(brut * 1000) / 1000;
 }
 
+/** Hauteurs des lignes (points). */
+const HAUTEUR = { ligne: 15, titre: 22, bloc: 28, groupe: 18 } as const;
+/**
+ * Hauteur utile d'une page A4 imprimee a l'echelle de la feuille, en points.
+ * Etalonnee dans Excel le 2026-11-20 : une feuille de 754 pt tient sur une
+ * page, une de 769 pt deborde. Toujours au plus LIGNES_PAR_PAGE_XLSX lignes.
+ */
+const HAUTEUR_PAGE = 760;
+
 interface Ligne {
   cellules: string[];
   hauteur?: number;
@@ -421,10 +430,16 @@ class Feuille {
     this.lignes.push({ cellules, hauteur });
     return this.lignes.length;
   }
-  /** Coupe la page avant la ligne suivante si `n` lignes ne tiennent plus et tiendraient sur une page vide. */
-  reserver(n: number): void {
-    const occupees = this.derniere - this.debutPage + 1;
-    if (occupees > 0 && occupees + n > LIGNES_PAR_PAGE_XLSX && n <= LIGNES_PAR_PAGE_XLSX) {
+  /**
+   * Coupe la page avant la ligne suivante si un ensemble de `h` points de
+   * haut ne tient plus et tiendrait sur une page vide. On compte la HAUTEUR
+   * des lignes, pas leur nombre : un titre de bloc pese pres de deux lignes
+   * (controle dans Excel : compter les lignes laissait une verification
+   * seule en page 2).
+   */
+  reserver(h: number): void {
+    const occupee = this.lignes.slice(this.debutPage - 1).reduce((s, l) => s + (l.hauteur ?? HAUTEUR.ligne), 0);
+    if (occupee > 0 && occupee + h > HAUTEUR_PAGE && h <= HAUTEUR_PAGE) {
       this.sauts.push(this.derniere);
       this.debutPage = this.suivante;
     }
@@ -453,12 +468,12 @@ function ligneEntetes(f: Feuille, textes: string[], verif: boolean): void {
 
 function ligneTitreBloc(f: Feuille, titre: string): void {
   const n = f.suivante;
-  f.ajouter(COLONNES.map((c, i) => cTexte(`${c}${n}`, i === 0 ? titre : '', S.bloc)), 28);
+  f.ajouter(COLONNES.map((c, i) => cTexte(`${c}${n}`, i === 0 ? titre : '', S.bloc)), HAUTEUR.bloc);
 }
 
 function ligneTitreGroupe(f: Feuille, titre: string, langue: Langue): void {
   const n = f.suivante;
-  f.ajouter([cTexte(`A${n}`, titre.toLocaleUpperCase(langue), S.groupe)], 18);
+  f.ajouter([cTexte(`A${n}`, titre.toLocaleUpperCase(langue), S.groupe)], HAUTEUR.groupe);
 }
 
 function feuilleXml(c: ClasseurCalcul, langue: Langue): { feuille: Feuille; xml: string } {
@@ -467,7 +482,7 @@ function feuilleXml(c: ClasseurCalcul, langue: Langue): { feuille: Feuille; xml:
   const k = c.cartouche;
 
   // Cartouche.
-  f.ajouter([cTexte('A1', k.titre, S.titre)], 22);
+  f.ajouter([cTexte('A1', k.titre, S.titre)], HAUTEUR.titre);
   const paires: Array<[[string, string] | null, [string, string]]> = [
     [[m.projet, k.projet], [m.element, k.element]],
     [[m.outil, `${k.outil} ${k.version}`], [m.norme, k.norme]],
@@ -487,11 +502,11 @@ function feuilleXml(c: ClasseurCalcul, langue: Langue): { feuille: Feuille; xml:
   // Donnees.
   const groupesDonnees = c.donnees.filter((g) => g.lignes.length > 0);
   if (groupesDonnees.length > 0) {
-    f.reserver(2 + 1 + groupesDonnees[0].lignes.length);
+    f.reserver(HAUTEUR.bloc + HAUTEUR.ligne + HAUTEUR.groupe + groupesDonnees[0].lignes.length * HAUTEUR.ligne);
     ligneTitreBloc(f, m.donnees);
     ligneEntetes(f, entetesDonnees(m), false);
     groupesDonnees.forEach((g, i) => {
-      if (i > 0) f.reserver(1 + g.lignes.length);
+      if (i > 0) f.reserver(HAUTEUR.groupe + g.lignes.length * HAUTEUR.ligne);
       ligneTitreGroupe(f, g.titre, langue);
       for (const l of g.lignes) {
         const n = f.suivante;
@@ -515,11 +530,11 @@ function feuilleXml(c: ClasseurCalcul, langue: Langue): { feuille: Feuille; xml:
   // Calcul.
   const groupesCalcul = c.calcul.filter((g) => g.lignes.length > 0);
   if (groupesCalcul.length > 0) {
-    f.reserver(2 + 1 + groupesCalcul[0].lignes.length);
+    f.reserver(HAUTEUR.bloc + HAUTEUR.ligne + HAUTEUR.groupe + groupesCalcul[0].lignes.length * HAUTEUR.ligne);
     ligneTitreBloc(f, m.calcul);
     ligneEntetes(f, entetesCalcul(m), false);
     groupesCalcul.forEach((g, i) => {
-      if (i > 0) f.reserver(1 + g.lignes.length);
+      if (i > 0) f.reserver(HAUTEUR.groupe + g.lignes.length * HAUTEUR.ligne);
       ligneTitreGroupe(f, g.titre, langue);
       for (const l of g.lignes) {
         const n = f.suivante;
@@ -539,7 +554,7 @@ function feuilleXml(c: ClasseurCalcul, langue: Langue): { feuille: Feuille; xml:
   // Verifications.
   let mef = '';
   if (c.verifications.length > 0) {
-    f.reserver(2 + c.verifications.length);
+    f.reserver(HAUTEUR.bloc + HAUTEUR.ligne + c.verifications.length * HAUTEUR.ligne);
     ligneTitreBloc(f, m.verifications);
     ligneEntetes(f, entetesVerifications(m), true);
     const premiere = f.suivante;
